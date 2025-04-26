@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { DayPicker, Row, RowProps } from "react-day-picker";
 import { ru } from "date-fns/locale";
 import { 
   format, 
@@ -10,7 +9,8 @@ import {
   addWeeks, 
   subWeeks, 
   isWithinInterval,
-  getWeek 
+  getWeek,
+  getDay
 } from "date-fns";
 import { WorkoutLog } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -146,19 +146,46 @@ const WorkoutDetails = ({ workoutLogId }: { workoutLogId: number }) => {
   );
 };
 
-// Компонент для отображения только одной недели
-const SingleWeekRow = (props: RowProps) => {
-  const { displayMonth } = props;
-  if (!displayMonth) return null;
-  
-  // Просто передаем все пропы оригинальному компоненту Row без добавления className
-  return <Row {...props} />;
+// Создаем кастомный день календаря
+const CalendarDay = ({ 
+  date, 
+  isToday, 
+  isWorkout, 
+  isCompleted, 
+  isSelected, 
+  onClick 
+}: { 
+  date: Date, 
+  isToday: boolean, 
+  isWorkout: boolean, 
+  isCompleted: boolean,
+  isSelected: boolean,
+  onClick: () => void 
+}) => {
+  const dayClasses = `
+    w-10 h-10 mx-auto rounded-full flex items-center justify-center text-sm font-medium
+    transition-all hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none
+    ${isToday ? 'font-bold text-primary bg-primary-light ring-2 ring-primary/30 ring-offset-2 ring-offset-background' : ''}
+    ${isSelected ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : ''}
+    ${!isSelected && !isToday ? 'text-gray-900 dark:text-gray-100' : ''}
+  `;
+
+  return (
+    <button
+      className={dayClasses}
+      onClick={onClick}
+      type="button"
+    >
+      <div className={`relative ${isWorkout ? 'workout-day' : ''} ${isCompleted ? 'completed-workout' : ''}`}>
+        {format(date, "d")}
+      </div>
+    </button>
+  );
 };
 
 const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
-  const [selectedWorkoutId, setSelectedWorkoutId] = useState<number | null>(null);
   
   // Получаем даты тренировок
   const workoutDays = workoutLogs.map(log => new Date(log.date));
@@ -168,12 +195,15 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
   const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
   
-  // Модификатор для стилизации дней с тренировками
+  // Дни недели на русском
+  const weekDayNames = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  
+  // Проверка на день с тренировкой
   const isWorkoutDay = (date: Date) => {
     return workoutDays.some(workoutDate => isSameDay(date, workoutDate));
   };
   
-  // Модификатор для стилизации дней с завершенными тренировками
+  // Проверка на день с завершенной тренировкой
   const isCompletedWorkoutDay = (date: Date) => {
     return workoutLogs.some(log => 
       log.completed && isSameDay(new Date(log.date), date)
@@ -197,49 +227,10 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
   
   const handleDayClick = (day: Date) => {
     setSelectedDay(day);
-    
-    // Если на выбранный день есть тренировки, показываем первую
-    const dayWorkouts = getWorkoutsForDay(day);
-    if (dayWorkouts.length > 0) {
-      setSelectedWorkoutId(dayWorkouts[0].id);
-    } else {
-      setSelectedWorkoutId(null);
-    }
   };
   
-  // Функция для форматирования заголовка календаря
-  const formatCaption = (_: Date, options: { locale?: any }) => {
-    const weekNumber = getWeek(currentWeek);
-    return (
-      <div className="flex justify-between items-center px-1 pt-1 pb-3">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={goToPreviousWeek}
-          className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary border-0 shadow-sm"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <div className="text-center min-w-[200px]">
-          <div className="font-semibold text-base">
-            {format(weekStart, "d MMM", { locale: options.locale })} - {format(weekEnd, "d MMM yyyy", { locale: options.locale })}
-          </div>
-          <div className="text-xs text-muted-foreground mt-1 bg-primary/5 rounded-full px-2 py-0.5 inline-block">
-            Неделя {weekNumber}
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={goToNextWeek}
-          className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary border-0 shadow-sm"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-    );
-  };
-
+  const weekNumber = getWeek(currentWeek);
+  
   return (
     <div className="space-y-6">
       <Card>
@@ -250,66 +241,105 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <DayPicker
-            mode="single"
-            selected={selectedDay}
-            onSelect={(day) => day && handleDayClick(day)}
-            month={weekStart}
-            locale={ru}
-            weekStartsOn={1}
-            formatters={{ formatCaption }}
-            modifiers={{
-              workout: (date) => isWorkoutDay(date),
-              completed: (date) => isCompletedWorkoutDay(date),
-            }}
-            modifiersClassNames={{
-              workout: "workout-day",
-              completed: "completed-workout",
-            }}
-            components={{
-              Row: SingleWeekRow
-            }}
-            // Показываем только дни текущей недели
-            hidden={(date) => !isWithinInterval(date, { start: weekStart, end: weekEnd })}
-            footer={
-              <div className="mt-4 text-center">
-                {(() => {
-                  const workoutsThisWeek = workoutDays.filter(date => 
-                    isWithinInterval(date, { start: weekStart, end: weekEnd })
-                  ).length;
-                  
-                  const completedWorkoutsThisWeek = workoutLogs.filter(log => 
-                    log.completed && isWithinInterval(new Date(log.date), { start: weekStart, end: weekEnd })
-                  ).length;
-                  
-                  return workoutsThisWeek > 0 ? (
-                    <div className="flex flex-col gap-2 items-center">
-                      <div className="flex gap-1.5 items-center">
-                        <div className="bg-primary/10 dark:bg-primary/20 rounded-full px-2.5 py-1.5 text-sm font-medium text-primary">
-                          {workoutsThisWeek}
-                        </div>
-                        <span className="text-sm text-muted-foreground">тренировок на этой неделе</span>
-                      </div>
-                      {completedWorkoutsThisWeek > 0 && (
-                        <div className="text-xs text-success flex items-center">
-                          <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                          <span>{completedWorkoutsThisWeek} из {workoutsThisWeek} тренировок выполнено</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-1 items-center">
-                      <div className="text-sm text-muted-foreground">Нет тренировок на этой неделе</div>
-                      <Button variant="link" size="sm" className="h-7 text-xs text-primary flex items-center gap-1 px-2 py-0">
-                        <Plus className="h-3.5 w-3.5" />
-                        <span>Добавить тренировку</span>
-                      </Button>
-                    </div>
-                  );
-                })()}
+          <div className="calendar-container">
+            {/* Заголовок календаря */}
+            <div className="flex justify-between items-center px-1 pt-1 pb-5">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={goToPreviousWeek}
+                className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary border-0 shadow-sm"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-center min-w-[200px]">
+                <div className="font-semibold text-base">
+                  {format(weekStart, "d MMM", { locale: ru })} - {format(weekEnd, "d MMM yyyy", { locale: ru })}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1 bg-primary/5 rounded-full px-2 py-0.5 inline-block">
+                  Неделя {weekNumber}
+                </div>
               </div>
-            }
-          />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={goToNextWeek}
+                className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary border-0 shadow-sm"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Дни недели */}
+            <div className="grid grid-cols-7 mb-2">
+              {weekDayNames.map((day, index) => (
+                <div key={index} className="text-center font-bold text-sm text-gray-600 dark:text-gray-300 py-2 capitalize">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            {/* Дни календаря */}
+            <div className="grid grid-cols-7 gap-1 py-1">
+              {daysInWeek.map((day) => {
+                const isToday = isSameDay(day, new Date());
+                const dayWorkout = isWorkoutDay(day);
+                const completedWorkout = isCompletedWorkoutDay(day);
+                const isDaySelected = selectedDay ? isSameDay(day, selectedDay) : false;
+                
+                return (
+                  <div key={day.toString()} className="text-center">
+                    <CalendarDay
+                      date={day}
+                      isToday={isToday}
+                      isWorkout={dayWorkout}
+                      isCompleted={completedWorkout}
+                      isSelected={isDaySelected}
+                      onClick={() => handleDayClick(day)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Статистика тренировок */}
+            <div className="mt-6 text-center">
+              {(() => {
+                const workoutsThisWeek = workoutDays.filter(date => 
+                  isWithinInterval(date, { start: weekStart, end: weekEnd })
+                ).length;
+                
+                const completedWorkoutsThisWeek = workoutLogs.filter(log => 
+                  log.completed && isWithinInterval(new Date(log.date), { start: weekStart, end: weekEnd })
+                ).length;
+                
+                return workoutsThisWeek > 0 ? (
+                  <div className="flex flex-col gap-2 items-center">
+                    <div className="flex gap-1.5 items-center">
+                      <div className="bg-primary/10 dark:bg-primary/20 rounded-full px-2.5 py-1.5 text-sm font-medium text-primary">
+                        {workoutsThisWeek}
+                      </div>
+                      <span className="text-sm text-muted-foreground">тренировок на этой неделе</span>
+                    </div>
+                    {completedWorkoutsThisWeek > 0 && (
+                      <div className="text-xs text-success flex items-center">
+                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                        <span>{completedWorkoutsThisWeek} из {workoutsThisWeek} тренировок выполнено</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1 items-center">
+                    <div className="text-sm text-muted-foreground">Нет тренировок на этой неделе</div>
+                    <Button variant="link" size="sm" className="h-7 text-xs text-primary flex items-center gap-1 px-2 py-0">
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Добавить тренировку</span>
+                    </Button>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
         </CardContent>
       </Card>
       
@@ -335,7 +365,6 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
                             ? 'border-green-500 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20' 
                             : 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20'}
                         `}
-                        onClick={() => setSelectedWorkoutId(workout.id)}
                       >
                         <div className="flex items-center">
                           {workout.completed ? (
