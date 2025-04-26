@@ -70,6 +70,7 @@ const AddPhotoForm = ({ open, onOpenChange }: AddPhotoFormProps) => {
   
   const uploadPhotoMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      console.log("Отправка данных формы:", Object.fromEntries(data.entries()));
       return await apiRequest("POST", "/api/progress-photos", data);
     },
     onSuccess: () => {
