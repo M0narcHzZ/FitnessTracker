@@ -57,6 +57,7 @@ const AddPhotoForm = ({ open, onOpenChange }: AddPhotoFormProps) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      console.log("Выбранный файл:", file.name, "размер:", file.size, "тип:", file.type);
       setSelectedFile(file);
       
       // Create preview URL

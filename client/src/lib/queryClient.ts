@@ -14,10 +14,14 @@ export async function apiRequest(
 ): Promise<any> {
   console.log(`API Request ${method} ${url}:`, data);
   
+  const isFormData = data instanceof FormData;
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    // Важно: для FormData не устанавливаем Content-Type, браузер сам добавит его с правильным boundary
+    headers: data && !isFormData ? { "Content-Type": "application/json" } : {},
+    // Для FormData используем данные напрямую, для других данных - JSON.stringify
+    body: isFormData ? data as FormData : data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
 
