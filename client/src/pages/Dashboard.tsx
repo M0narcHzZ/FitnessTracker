@@ -1,19 +1,14 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
-  Measurement, 
   MeasurementWithChange, 
-  WorkoutProgramWithExercises,
   WorkoutLog
 } from "@shared/schema";
 import StatCard from "@/components/StatCard";
 import TodaysWorkout from "@/components/TodaysWorkout";
 import ProgressPhotoGrid from "@/components/ProgressPhotoGrid";
-import WorkoutCalendar from "@/components/WorkoutCalendar";
 import WorkoutStats from "@/components/WorkoutStats";
-import WorkoutHistory from "@/components/WorkoutHistory";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 
 const Dashboard = () => {
@@ -138,47 +133,17 @@ const Dashboard = () => {
         <TodaysWorkout />
       </div>
       
-      {/* Workout Calendar and Stats */}
+      {/* Workout Stats */}
       <div>
         <h3 className="text-xl font-medium mb-4">Статистика тренировок</h3>
         
-        <Tabs defaultValue="calendar" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="calendar">Календарь</TabsTrigger>
-            <TabsTrigger value="stats">Статистика</TabsTrigger>
-            <TabsTrigger value="history">История</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="calendar" className="space-y-4">
-            {isWorkoutLogsLoading ? (
-              <div className="h-64 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <WorkoutCalendar workoutLogs={workoutLogs} />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="stats" className="space-y-4">
-            {isWorkoutLogsLoading ? (
-              <div className="h-64 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <WorkoutStats workoutLogs={workoutLogs} />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="history" className="space-y-4">
-            {isWorkoutLogsLoading ? (
-              <div className="h-64 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <WorkoutHistory workoutLogs={workoutLogs} />
-            )}
-          </TabsContent>
-        </Tabs>
+        {isWorkoutLogsLoading ? (
+          <div className="h-64 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <WorkoutStats workoutLogs={workoutLogs} />
+        )}
       </div>
       
       <Separator />

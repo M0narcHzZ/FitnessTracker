@@ -1,7 +1,17 @@
 import { useState } from "react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, Row, RowProps } from "react-day-picker";
 import { ru } from "date-fns/locale";
-import { format, isSameDay, isAfter, isBefore, addMonths } from "date-fns";
+import { 
+  format, 
+  isSameDay, 
+  startOfWeek, 
+  endOfWeek, 
+  eachDayOfInterval, 
+  addWeeks, 
+  subWeeks, 
+  isWithinInterval,
+  getWeek 
+} from "date-fns";
 import { WorkoutLog } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,13 +96,27 @@ const WorkoutDetails = ({ workoutLogId }: { workoutLogId: number }) => {
   );
 };
 
+// Компонент для отображения только одной недели
+const SingleWeekRow = (props: RowProps) => {
+  const { displayMonth } = props;
+  if (!displayMonth) return null;
+  
+  // Получаем текущую неделю
+  return <Row {...props} />;
+};
+
 const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
-  const [month, setMonth] = useState<Date>(new Date());
+  const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<number | null>(null);
   
   // Получаем даты тренировок
   const workoutDays = workoutLogs.map(log => new Date(log.date));
+  
+  // Расчет дней текущей недели
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Неделя начинается с понедельника
+  const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
+  const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
   
   // Модификатор для стилизации дней с тренировками
   const isWorkoutDay = (date: Date) => {
@@ -106,14 +130,14 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
     );
   };
   
-  // Функция перехода к предыдущему месяцу
-  const goToPreviousMonth = () => {
-    setMonth(prev => addMonths(prev, -1));
+  // Функция перехода к предыдущей неделе
+  const goToPreviousWeek = () => {
+    setCurrentWeek(prevWeek => subWeeks(prevWeek, 1));
   };
   
-  // Функция перехода к следующему месяцу
-  const goToNextMonth = () => {
-    setMonth(prev => addMonths(prev, 1));
+  // Функция перехода к следующей неделе
+  const goToNextWeek = () => {
+    setCurrentWeek(prevWeek => addWeeks(prevWeek, 1));
   };
 
   // Получение тренировок для выбранного дня
@@ -134,24 +158,26 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
   };
   
   // Функция для форматирования заголовка календаря
-  const formatCaption = (month: Date, options: { locale?: Locale }) => {
+  const formatCaption = (month: Date, options: { locale?: any }) => {
+    const weekNumber = getWeek(currentWeek);
     return (
       <div className="flex justify-between items-center px-1">
         <Button
           variant="outline"
           size="icon"
-          onClick={goToPreviousMonth}
+          onClick={goToPreviousWeek}
           className="h-7 w-7"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="font-medium">
-          {format(month, "LLLL yyyy", { locale: options.locale })}
+          {format(weekStart, "d MMMM", { locale: options.locale })} - {format(weekEnd, "d MMMM yyyy", { locale: options.locale })}
+          <div className="text-xs text-center text-muted-foreground">Неделя {weekNumber}</div>
         </div>
         <Button
           variant="outline"
           size="icon"
-          onClick={goToNextMonth}
+          onClick={goToNextWeek}
           className="h-7 w-7"
         >
           <ChevronRight className="h-4 w-4" />
@@ -174,7 +200,7 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
             mode="single"
             selected={selectedDay}
             onSelect={(day) => day && handleDayClick(day)}
-            month={month}
+            month={weekStart}
             locale={ru}
             weekStartsOn={1}
             formatters={{ formatCaption }}
@@ -186,6 +212,23 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
               workout: "workout-day",
               completed: "completed-workout",
             }}
+            components={{
+              Row: SingleWeekRow
+            }}
+            // Показываем только дни текущей недели
+            hidden={(date) => !isWithinInterval(date, { start: weekStart, end: weekEnd })}
+            footer={
+              <div className="mt-3 text-sm text-center text-muted-foreground">
+                {workoutDays.filter(date => 
+                  isWithinInterval(date, { start: weekStart, end: weekEnd })
+                ).length
+                  ? `Тренировок на этой неделе: ${workoutDays.filter(date => 
+                      isWithinInterval(date, { start: weekStart, end: weekEnd })
+                    ).length}`
+                  : "Нет тренировок на этой неделе"
+                }
+              </div>
+            }
           />
         </CardContent>
       </Card>

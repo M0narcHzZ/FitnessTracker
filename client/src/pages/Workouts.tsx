@@ -5,7 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import WorkoutProgramCard from "@/components/WorkoutProgramCard";
 import AddWorkoutForm from "@/components/AddWorkoutForm";
-import { WorkoutProgramWithExercises } from "@shared/schema";
+import WorkoutCalendar from "@/components/WorkoutCalendar";
+import WorkoutHistory from "@/components/WorkoutHistory";
+import { WorkoutProgramWithExercises, WorkoutLog } from "@shared/schema";
 
 const Workouts = () => {
   const [activeTab, setActiveTab] = useState("programs");
@@ -15,6 +17,11 @@ const Workouts = () => {
   // Fetch all workout programs
   const { data: workoutPrograms, isLoading } = useQuery<WorkoutProgramWithExercises[]>({
     queryKey: ["/api/workout-programs"],
+  });
+  
+  // Fetch workout logs
+  const { data: workoutLogs = [], isLoading: isWorkoutLogsLoading } = useQuery<WorkoutLog[]>({
+    queryKey: ["/api/workout-logs"],
   });
   
   // Add event listener for opening the dialog from mobile button
@@ -103,25 +110,27 @@ const Workouts = () => {
           </TabsContent>
           
           <TabsContent value="calendar" className="mt-4">
-            <div className="text-center p-6 bg-white rounded-lg shadow-md">
-              <span className="material-icons text-4xl text-neutral-medium mb-2">
-                calendar_today
-              </span>
-              <p className="text-neutral-medium">
-                Календарь тренировок будет доступен в следующей версии приложения.
-              </p>
-            </div>
+            {isWorkoutLogsLoading ? (
+              <div className="h-64 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="bg-white p-4 rounded-lg shadow-md">
+                <WorkoutCalendar workoutLogs={workoutLogs} />
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="history" className="mt-4">
-            <div className="text-center p-6 bg-white rounded-lg shadow-md">
-              <span className="material-icons text-4xl text-neutral-medium mb-2">
-                history
-              </span>
-              <p className="text-neutral-medium">
-                История тренировок будет доступна в следующей версии приложения.
-              </p>
-            </div>
+            {isWorkoutLogsLoading ? (
+              <div className="h-64 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="bg-white p-4 rounded-lg shadow-md">
+                <WorkoutHistory workoutLogs={workoutLogs} />
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
