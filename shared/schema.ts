@@ -137,14 +137,16 @@ export const progressPhotos = pgTable("progress_photos", {
   relatedMeasurementId: integer("related_measurement_id"),
 });
 
-export const insertProgressPhotoSchema = createInsertSchema(progressPhotos).pick({
-  userId: true,
-  photoUrl: true,
-  category: true,
-  date: true,
-  notes: true,
-  relatedMeasurementId: true,
-});
+export const insertProgressPhotoSchema = createInsertSchema(progressPhotos)
+  .omit({ date: true })
+  .extend({
+    userId: z.number(),
+    photoUrl: z.string(),
+    category: z.string().nullable(),
+    date: z.date(),
+    notes: z.string().nullable(),
+    relatedMeasurementId: z.number().nullable(),
+  });
 
 // Define relationships
 
