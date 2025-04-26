@@ -73,7 +73,7 @@ export const workoutExercises = pgTable("workout_exercises", {
   sets: integer("sets"),
   reps: integer("reps"),
   duration: text("duration"),
-  order: integer("order").notNull(),
+  sequence: integer("sequence").notNull(), // Переименовали order в sequence
 });
 
 export const insertWorkoutExerciseSchema = createInsertSchema(workoutExercises).pick({
@@ -82,7 +82,7 @@ export const insertWorkoutExerciseSchema = createInsertSchema(workoutExercises).
   sets: true,
   reps: true,
   duration: true,
-  order: true,
+  sequence: true, // Переименовали order в sequence
 });
 
 // Workout Log model
