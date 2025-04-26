@@ -207,7 +207,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertWorkoutProgramSchema.partial().parse(req.body);
       const updatedProgram = await storage.updateWorkoutProgram(id, validatedData);
-      res.json(updatedProgram);
+      
+      // Transform to camelCase before returning to client
+      const transformedProgram = {
+        id: updatedProgram.id,
+        userId: updatedProgram.userId || updatedProgram.user_id,
+        name: updatedProgram.name,
+        description: updatedProgram.description,
+        colorScheme: updatedProgram.colorScheme || updatedProgram.color_scheme,
+        estimatedDuration: updatedProgram.estimatedDuration || updatedProgram.estimated_duration
+      };
+      
+      res.json(transformedProgram);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: 'Invalid workout program data', errors: error.errors });
