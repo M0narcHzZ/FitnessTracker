@@ -1,243 +1,246 @@
 import { useState } from "react";
-import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, CalendarIcon, CheckCircle2, Info } from "lucide-react";
+import { DayPicker } from "react-day-picker";
 import { ru } from "date-fns/locale";
+import { format, isSameDay, isAfter, isBefore, addMonths } from "date-fns";
 import { WorkoutLog } from "@shared/schema";
-import { formatDateToRu } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronLeft, ChevronRight, Calendar, CheckCircle2 } from "lucide-react";
 import { 
-  format, 
-  isToday, 
-  addDays, 
-  isSameDay, 
-  startOfMonth, 
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  isSameMonth
-} from "date-fns";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 
 interface WorkoutCalendarProps {
   workoutLogs: WorkoutLog[];
-  onDateClick?: (date: Date) => void;
 }
 
-const WorkoutCalendar = ({ workoutLogs, onDateClick }: WorkoutCalendarProps) => {
-  const [date, setDate] = useState<Date>(new Date());
-  const [view, setView] = useState<"month" | "week">("month");
-  
-  // Функция для получения тренировок на выбранную дату
-  const getWorkoutsForDate = (date: Date) => {
-    return workoutLogs.filter(log => {
-      const logDate = new Date(log.date);
-      return isSameDay(logDate, date);
-    });
-  };
-  
-  // Функция для форматирования статистики за период
-  const getStatsForPeriod = (startDate: Date, endDate: Date) => {
-    const logsInPeriod = workoutLogs.filter(log => {
-      const logDate = new Date(log.date);
-      return logDate >= startDate && logDate <= endDate;
-    });
-    
-    const completedWorkouts = logsInPeriod.filter(log => log.completed).length;
-    const totalWorkouts = logsInPeriod.length;
-    const completion = totalWorkouts > 0 ? Math.round((completedWorkouts / totalWorkouts) * 100) : 0;
-    
-    return {
-      completedWorkouts,
-      totalWorkouts,
-      completion
-    };
-  };
-  
-  // Статистика для текущего месяца
-  const monthStartDate = startOfMonth(date);
-  const monthEndDate = endOfMonth(date);
-  const monthStats = getStatsForPeriod(monthStartDate, monthEndDate);
-  
-  // Статистика для текущей недели
-  const weekStartDate = startOfWeek(date, { weekStartsOn: 1 });
-  const weekEndDate = endOfWeek(date, { weekStartsOn: 1 });
-  const weekStats = getStatsForPeriod(weekStartDate, weekEndDate);
-  
-  // Создаем массив дат с тренировками для использования в календаре
-  const workoutDates = workoutLogs.map(log => new Date(log.date));
-  
+const WorkoutDetails = ({ workoutLogId }: { workoutLogId: number }) => {
+  const { data, isLoading, error } = useQuery<any>({
+    queryKey: [`/api/workout-logs/${workoutLogId}`],
+  });
+
+  const { data: exerciseLogs = [], isLoading: isExerciseLogsLoading } = useQuery<any[]>({
+    queryKey: [`/api/workout-logs/${workoutLogId}/exercise-logs`],
+  });
+
+  if (isLoading || isExerciseLogsLoading) {
+    return (
+      <div className="flex justify-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Ошибка загрузки данных</div>;
+  }
+
+  if (!data) {
+    return <div>Информация о тренировке не найдена</div>;
+  }
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          <span>Календарь тренировок</span>
-          <TabsList>
-            <TabsTrigger 
-              value="month" 
-              onClick={() => setView("month")}
-              className={view === "month" ? "bg-primary text-white" : ""}
-            >
-              Месяц
-            </TabsTrigger>
-            <TabsTrigger 
-              value="week" 
-              onClick={() => setView("week")}
-              className={view === "week" ? "bg-primary text-white" : ""}
-            >
-              Неделя
-            </TabsTrigger>
-          </TabsList>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="w-full md:w-1/2">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={(newDate) => {
-                if (newDate) {
-                  setDate(newDate);
-                  if (onDateClick) {
-                    onDateClick(newDate);
-                  }
-                }
-              }}
-              locale={ru}
-              modifiers={{
-                workout: workoutDates,
-                completed: workoutLogs
-                  .filter(log => log.completed)
-                  .map(log => new Date(log.date))
-              }}
-              modifiersClassNames={{
-                workout: "workout-day",
-                completed: "completed-workout"
-              }}
-              className="border rounded-md"
-              components={{
-                DayContent: (props) => {
-                  const isWorkoutDay = workoutDates.some(wDate => 
-                    isSameDay(wDate, props.date)
-                  );
-                  const isCompletedWorkout = workoutLogs
-                    .filter(log => log.completed)
-                    .some(log => isSameDay(new Date(log.date), props.date));
-                  
-                  return (
-                    <div className="relative">
-                      <time dateTime={format(props.date, 'yyyy-MM-dd')}>
-                        {props.date.getDate()}
-                      </time>
-                      {isWorkoutDay && !isCompletedWorkout && (
-                        <div className="absolute top-0 right-0 h-2 w-2 bg-blue-500 rounded-full"></div>
-                      )}
-                      {isCompletedWorkout && (
-                        <div className="absolute top-0 right-0 h-2 w-2 bg-green-500 rounded-full"></div>
-                      )}
-                    </div>
-                  );
-                }
-              }}
-            />
-          </div>
-          
-          <div className="w-full md:w-1/2">
-            <div className="space-y-6">
-              {/* Статистика */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="p-3">
-                    <CardTitle className="text-sm font-medium">За неделю</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 pt-0">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Тренировок</span>
-                        <span className="font-medium">{weekStats.totalWorkouts}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Выполнено</span>
-                        <span className="font-medium">{weekStats.completedWorkouts}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Процент</span>
-                        <span className="font-medium">{weekStats.completion}%</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="p-3">
-                    <CardTitle className="text-sm font-medium">За месяц</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 pt-0">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Тренировок</span>
-                        <span className="font-medium">{monthStats.totalWorkouts}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Выполнено</span>
-                        <span className="font-medium">{monthStats.completedWorkouts}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Процент</span>
-                        <span className="font-medium">{monthStats.completion}%</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              {/* Тренировки на выбранную дату */}
-              <div>
-                <h3 className="text-lg font-semibold mb-2">
-                  {isToday(date) ? 'Сегодня' : formatDateToRu(date)}
-                </h3>
-                
-                {getWorkoutsForDate(date).length > 0 ? (
-                  <div className="space-y-2">
-                    {getWorkoutsForDate(date).map((workout) => (
-                      <Card key={workout.id} className="overflow-hidden">
-                        <div className={`flex items-center p-3 ${workout.completed ? 'bg-green-50' : 'bg-blue-50'}`}>
-                          <div className="flex-1">
-                            <div className="font-medium">{workout.name || "Тренировка"}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {workout.completed ? 
-                                <span className="flex items-center text-green-600">
-                                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                  Выполнена
-                                </span> : 
-                                <span className="flex items-center text-blue-600">
-                                  <CalendarIcon className="h-3.5 w-3.5 mr-1" />
-                                  Запланирована
-                                </span>
-                              }
-                            </div>
-                          </div>
-                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      </Card>
-                    ))}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">{data.name || "Тренировка"}</h3>
+        <Badge variant={data.completed ? "success" : "outline"}>
+          {data.completed ? "Завершена" : "В процессе"}
+        </Badge>
+      </div>
+      
+      <div className="text-sm text-muted-foreground">
+        {format(new Date(data.date), "dd MMMM yyyy, HH:mm", { locale: ru })}
+      </div>
+      
+      {exerciseLogs.length > 0 ? (
+        <div className="space-y-3">
+          <h4 className="text-md font-medium">Упражнения:</h4>
+          <div className="space-y-2">
+            {exerciseLogs.map((log: any) => (
+              <div key={log.id} className="flex justify-between items-center p-2 bg-muted rounded-md">
+                <div>
+                  <span className="font-medium">{log.exercise.name}</span>
+                  <div className="text-sm text-muted-foreground">
+                    {log.reps && `${log.reps} повт.`}
+                    {log.weight && ` | ${log.weight} кг`}
+                    {log.duration && ` | ${log.duration}`}
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-6 text-center bg-muted/30 rounded-lg">
-                    <Info className="h-8 w-8 text-muted-foreground mb-2" />
-                    <h3 className="text-lg font-medium">Нет тренировок</h3>
-                    <p className="text-sm text-muted-foreground">
-                      На выбранную дату не запланировано тренировок
-                    </p>
-                  </div>
-                )}
+                </div>
+                {log.completed && <CheckCircle2 className="h-5 w-5 text-green-500" />}
               </div>
-            </div>
+            ))}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      ) : (
+        <div className="text-center text-muted-foreground py-4">
+          Нет данных об упражнениях
+        </div>
+      )}
+    </div>
+  );
+};
+
+const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
+  const [month, setMonth] = useState<Date>(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState<number | null>(null);
+  
+  // Получаем даты тренировок
+  const workoutDays = workoutLogs.map(log => new Date(log.date));
+  
+  // Модификатор для стилизации дней с тренировками
+  const isWorkoutDay = (date: Date) => {
+    return workoutDays.some(workoutDate => isSameDay(date, workoutDate));
+  };
+  
+  // Модификатор для стилизации дней с завершенными тренировками
+  const isCompletedWorkoutDay = (date: Date) => {
+    return workoutLogs.some(log => 
+      log.completed && isSameDay(new Date(log.date), date)
+    );
+  };
+  
+  // Функция перехода к предыдущему месяцу
+  const goToPreviousMonth = () => {
+    setMonth(prev => addMonths(prev, -1));
+  };
+  
+  // Функция перехода к следующему месяцу
+  const goToNextMonth = () => {
+    setMonth(prev => addMonths(prev, 1));
+  };
+
+  // Получение тренировок для выбранного дня
+  const getWorkoutsForDay = (date: Date) => {
+    return workoutLogs.filter(log => isSameDay(new Date(log.date), date));
+  };
+  
+  const handleDayClick = (day: Date) => {
+    setSelectedDay(day);
+    
+    // Если на выбранный день есть тренировки, показываем первую
+    const dayWorkouts = getWorkoutsForDay(day);
+    if (dayWorkouts.length > 0) {
+      setSelectedWorkoutId(dayWorkouts[0].id);
+    } else {
+      setSelectedWorkoutId(null);
+    }
+  };
+  
+  // Функция для форматирования заголовка календаря
+  const formatCaption = (month: Date, options: { locale?: Locale }) => {
+    return (
+      <div className="flex justify-between items-center px-1">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={goToPreviousMonth}
+          className="h-7 w-7"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="font-medium">
+          {format(month, "LLLL yyyy", { locale: options.locale })}
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={goToNextMonth}
+          className="h-7 w-7"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center">
+            <Calendar className="mr-2 h-5 w-5" />
+            Календарь тренировок
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DayPicker
+            mode="single"
+            selected={selectedDay}
+            onSelect={(day) => day && handleDayClick(day)}
+            month={month}
+            locale={ru}
+            weekStartsOn={1}
+            formatters={{ formatCaption }}
+            modifiers={{
+              workout: (date) => isWorkoutDay(date),
+              completed: (date) => isCompletedWorkoutDay(date),
+            }}
+            modifiersClassNames={{
+              workout: "workout-day",
+              completed: "completed-workout",
+            }}
+          />
+        </CardContent>
+      </Card>
+      
+      {selectedDay && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Тренировки на {format(selectedDay, "d MMMM", { locale: ru })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {getWorkoutsForDay(selectedDay).length > 0 ? (
+              <div className="space-y-3">
+                {getWorkoutsForDay(selectedDay).map((workout) => (
+                  <Dialog key={workout.id}>
+                    <DialogTrigger asChild>
+                      <div
+                        className={`
+                          flex justify-between items-center p-3 rounded-md cursor-pointer border
+                          ${workout.completed 
+                            ? 'border-green-500 bg-green-50 dark:bg-green-950/30' 
+                            : 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'}
+                        `}
+                        onClick={() => setSelectedWorkoutId(workout.id)}
+                      >
+                        <div>
+                          <div className="font-medium">{workout.name || "Тренировка"}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(workout.date), "HH:mm", { locale: ru })}
+                          </div>
+                        </div>
+                        <Badge variant={workout.completed ? "success" : "secondary"}>
+                          {workout.completed ? "Завершена" : "В процессе"}
+                        </Badge>
+                      </div>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Детали тренировки</DialogTitle>
+                      </DialogHeader>
+                      <WorkoutDetails workoutLogId={workout.id} />
+                    </DialogContent>
+                  </Dialog>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                На выбранный день нет тренировок
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
 

@@ -1,37 +1,11 @@
-import { useState } from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  BarChart, 
-  Bar, 
-  Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Legend 
-} from "recharts";
+import { useState, useMemo } from "react";
 import { WorkoutLog } from "@shared/schema";
-import { 
-  subDays, 
-  subWeeks, 
-  subMonths, 
-  startOfDay, 
-  startOfWeek, 
-  format, 
-  isWithinInterval 
-} from "date-fns";
+import { format, subMonths, isWithinInterval, startOfMonth, endOfMonth, parseISO, differenceInDays, isSameMonth } from "date-fns";
 import { ru } from "date-fns/locale";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 interface WorkoutStatsProps {
   workoutLogs: WorkoutLog[];
@@ -44,296 +18,267 @@ interface ChartData {
 }
 
 const WorkoutStats = ({ workoutLogs }: WorkoutStatsProps) => {
-  const [period, setPeriod] = useState<"week" | "month" | "year">("week");
+  const [timeRange, setTimeRange] = useState<"1m" | "3m" | "6m" | "all">("3m");
   
-  // Подготовка данных для статистики
-  const prepareStatsData = () => {
-    const today = new Date();
-    let startDate: Date;
+  // Фильтрация тренировок в зависимости от выбранного временного интервала
+  const filteredWorkoutLogs = useMemo(() => {
+    const currentDate = new Date();
     
-    // Определение начальной даты в зависимости от выбранного периода
-    switch (period) {
-      case "week":
-        startDate = subDays(today, 7);
+    let startDate: Date;
+    switch (timeRange) {
+      case "1m":
+        startDate = subMonths(currentDate, 1);
         break;
-      case "month":
-        startDate = subMonths(today, 1);
+      case "3m":
+        startDate = subMonths(currentDate, 3);
         break;
-      case "year":
-        startDate = subMonths(today, 12);
+      case "6m":
+        startDate = subMonths(currentDate, 6);
         break;
+      case "all":
+      default:
+        return workoutLogs;
     }
     
-    // Фильтруем логи за выбранный период
-    const filteredLogs = workoutLogs.filter(log => {
+    return workoutLogs.filter(log => {
       const logDate = new Date(log.date);
-      return isWithinInterval(logDate, { start: startDate, end: today });
+      return isWithinInterval(logDate, {
+        start: startDate,
+        end: currentDate
+      });
+    });
+  }, [workoutLogs, timeRange]);
+  
+  // Статистика типов тренировок (программы)
+  const workoutTypeStats = useMemo(() => {
+    const stats: Record<number, { name: string; count: number; color: string }> = {};
+    const colors = ["#4CAF50", "#2196F3", "#FFC107", "#9C27B0", "#FF5722", "#00BCD4"];
+    
+    filteredWorkoutLogs.forEach(log => {
+      const programId = log.workoutProgramId;
+      if (!stats[programId]) {
+        stats[programId] = {
+          name: log.name || `Программа ${programId}`,
+          count: 0,
+          color: colors[Object.keys(stats).length % colors.length]
+        };
+      }
+      stats[programId].count++;
     });
     
-    const totalWorkouts = filteredLogs.length;
-    const completedWorkouts = filteredLogs.filter(log => log.completed).length;
-    
-    // Создаем данные для диаграммы
-    const completionRate = totalWorkouts > 0 
-      ? Math.round((completedWorkouts / totalWorkouts) * 100) 
-      : 0;
-    
-    return {
-      totalWorkouts,
-      completedWorkouts,
-      completionRate
-    };
-  };
+    return Object.values(stats);
+  }, [filteredWorkoutLogs]);
+
+  // Данные для пирога типов тренировок
+  const pieChartData = useMemo(() => {
+    return workoutTypeStats.map(item => ({
+      name: item.name,
+      value: item.count,
+      color: item.color
+    }));
+  }, [workoutTypeStats]);
   
-  // Создание данных для еженедельной статистики
-  const createWeeklyData = (): ChartData[] => {
-    const today = new Date();
-    const startDate = subDays(today, 6);
-    const data: ChartData[] = [];
-    
-    for (let i = 0; i < 7; i++) {
-      const date = subDays(today, 6 - i);
-      const dayName = format(date, 'EEEEEE', { locale: ru });
-      
-      const workouts = workoutLogs.filter(log => {
-        const logDate = new Date(log.date);
-        return logDate.getDate() === date.getDate() && 
-               logDate.getMonth() === date.getMonth() && 
-               logDate.getFullYear() === date.getFullYear();
-      });
-      
-      data.push({
-        name: dayName,
-        value: workouts.length,
-        color: '#4f46e5'
-      });
-    }
-    
-    return data;
-  };
-  
-  // Создание данных для ежемесячной статистики
-  const createMonthlyData = (): ChartData[] => {
-    const today = new Date();
-    const startDate = subWeeks(today, 4);
-    const data: ChartData[] = [];
-    
-    for (let i = 0; i < 4; i++) {
-      const weekStart = subWeeks(today, 3 - i);
-      const weekEnd = subDays(subWeeks(today, 2 - i), 1);
-      const weekName = `Неделя ${i + 1}`;
-      
-      const workouts = workoutLogs.filter(log => {
-        const logDate = new Date(log.date);
-        return isWithinInterval(logDate, { start: weekStart, end: weekEnd });
-      });
-      
-      data.push({
-        name: weekName,
-        value: workouts.length,
-        color: '#4f46e5'
-      });
-    }
-    
-    return data;
-  };
-  
-  // Создание данных для годовой статистики
-  const createYearlyData = (): ChartData[] => {
-    const today = new Date();
-    const startDate = subMonths(today, 11);
-    const data: ChartData[] = [];
-    
-    for (let i = 0; i < 12; i++) {
-      const monthDate = subMonths(today, 11 - i);
-      const monthName = format(monthDate, 'LLL', { locale: ru });
-      
-      const workouts = workoutLogs.filter(log => {
-        const logDate = new Date(log.date);
-        return logDate.getMonth() === monthDate.getMonth() && 
-               logDate.getFullYear() === monthDate.getFullYear();
-      });
-      
-      data.push({
-        name: monthName,
-        value: workouts.length,
-        color: '#4f46e5'
-      });
-    }
-    
-    return data;
-  };
-  
-  // Создание данных для диаграммы по статусу выполнения
-  const createStatusData = (): ChartData[] => {
-    const { totalWorkouts, completedWorkouts } = prepareStatsData();
-    const uncompletedWorkouts = totalWorkouts - completedWorkouts;
+  // Статистика по статусу тренировок (завершенные/незавершенные)
+  const completionStats = useMemo(() => {
+    const completed = filteredWorkoutLogs.filter(log => log.completed).length;
+    const incomplete = filteredWorkoutLogs.length - completed;
     
     return [
-      { name: "Выполнено", value: completedWorkouts, color: "#22c55e" },
-      { name: "Не выполнено", value: uncompletedWorkouts, color: "#ef4444" }
+      { name: 'Завершено', value: completed, color: '#4CAF50' },
+      { name: 'Не завершено', value: incomplete, color: '#F44336' }
     ];
-  };
-  
-  const stats = prepareStatsData();
-  const weeklyData = createWeeklyData();
-  const monthlyData = createMonthlyData();
-  const yearlyData = createYearlyData();
-  const statusData = createStatusData();
-  
-  // Определение данных для отображения на основе выбранного периода
-  const getChartData = () => {
-    switch (period) {
-      case "week":
-        return weeklyData;
-      case "month":
-        return monthlyData;
-      case "year":
-        return yearlyData;
+  }, [filteredWorkoutLogs]);
+
+  // Статистика тренировок по месяцам
+  const monthlyStats = useMemo(() => {
+    const stats: Record<string, { month: string, count: number }> = {};
+    const currentDate = new Date();
+    
+    // Создаем записи для последних 6 месяцев
+    for (let i = 0; i < 6; i++) {
+      const date = subMonths(currentDate, i);
+      const monthKey = format(date, 'yyyy-MM');
+      const monthName = format(date, 'LLL', { locale: ru });
+      
+      stats[monthKey] = {
+        month: monthName,
+        count: 0
+      };
     }
-  };
-  
-  const chartData = getChartData();
-  
-  // Настройка подписей для оси X на основе выбранного периода
-  const getXAxisLabel = () => {
-    switch (period) {
-      case "week":
-        return "День недели";
-      case "month":
-        return "Неделя";
-      case "year":
-        return "Месяц";
-    }
-  };
+    
+    // Заполняем статистику
+    filteredWorkoutLogs.forEach(log => {
+      const logDate = new Date(log.date);
+      if (differenceInDays(currentDate, logDate) <= 180) { // последние 6 месяцев
+        const monthKey = format(logDate, 'yyyy-MM');
+        if (stats[monthKey]) {
+          stats[monthKey].count++;
+        }
+      }
+    });
+    
+    // Преобразуем объект в массив и сортируем по дате
+    return Object.values(stats).reverse();
+  }, [filteredWorkoutLogs]);
+
+  // Расчет процента завершенных тренировок
+  const completionPercentage = useMemo(() => {
+    if (filteredWorkoutLogs.length === 0) return 0;
+    return Math.round((filteredWorkoutLogs.filter(log => log.completed).length / filteredWorkoutLogs.length) * 100);
+  }, [filteredWorkoutLogs]);
+
+  // Общее количество тренировок
+  const totalWorkouts = filteredWorkoutLogs.length;
   
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Статистика тренировок</CardTitle>
-          <CardDescription>
-            Обзор ваших тренировок и прогресса
-          </CardDescription>
-          <Tabs
-            defaultValue="week"
-            value={period}
-            onValueChange={(value) => setPeriod(value as "week" | "month" | "year")}
-            className="w-full"
-          >
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="week">Неделя</TabsTrigger>
-              <TabsTrigger value="month">Месяц</TabsTrigger>
-              <TabsTrigger value="year">Год</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Карточки со статистикой */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="p-4">
-                  <CardTitle className="text-xl">
-                    {stats.totalWorkouts}
-                  </CardTitle>
-                  <CardDescription>
-                    Всего тренировок
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="p-4">
-                  <CardTitle className="text-xl">
-                    {stats.completedWorkouts}
-                  </CardTitle>
-                  <CardDescription>
-                    Выполнено
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              <Card className="col-span-2">
-                <CardHeader className="p-4">
-                  <CardTitle className="text-xl">
-                    {stats.completionRate}%
-                  </CardTitle>
-                  <CardDescription>
-                    Доля выполненных тренировок
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <Progress 
-                    value={stats.completionRate} 
-                    className="h-2 bg-neutral-200"
-                  />
-                </CardContent>
-              </Card>
-            </div>
-            
-            {/* Круговая диаграмма по статусу */}
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          
-          {/* График частоты тренировок */}
-          <div className="mt-6 h-72">
-            <h3 className="text-lg font-medium mb-4">Частота тренировок</h3>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 40,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  label={{ 
-                    value: getXAxisLabel(), 
-                    position: 'insideBottom', 
-                    offset: -15 
-                  }}
-                />
-                <YAxis 
-                  label={{ 
-                    value: 'Количество тренировок', 
-                    angle: -90, 
-                    position: 'insideLeft' 
-                  }}
-                />
-                <RechartsTooltip />
-                <Bar dataKey="value">
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Статистика тренировок</h2>
+        <Tabs 
+          defaultValue="3m" 
+          value={timeRange}
+          onValueChange={(value) => setTimeRange(value as "1m" | "3m" | "6m" | "all")} 
+          className="w-auto"
+        >
+          <TabsList>
+            <TabsTrigger value="1m">1 мес</TabsTrigger>
+            <TabsTrigger value="3m">3 мес</TabsTrigger>
+            <TabsTrigger value="6m">6 мес</TabsTrigger>
+            <TabsTrigger value="all">Все</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {totalWorkouts === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center pt-6 pb-6">
+            <p className="text-muted-foreground text-center">
+              Нет данных о тренировках за выбранный период
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {/* Карточка с общей статистикой */}
+          <Card className="col-span-full md:col-span-1">
+            <CardHeader>
+              <CardTitle>Общая статистика</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-1">Всего тренировок</p>
+                <p className="text-3xl font-bold">{totalWorkouts}</p>
+              </div>
+              
+              <div>
+                <div className="flex justify-between mb-1">
+                  <p className="text-sm font-medium">Процент завершения</p>
+                  <p className="text-sm font-medium">{completionPercentage}%</p>
+                </div>
+                <Progress value={completionPercentage} className="h-2" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* График типов тренировок */}
+          <Card className="md:col-span-1">
+            <CardHeader>
+              <CardTitle>Типы тренировок</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pieChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      nameKey="name"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} тренировок`, 'Количество']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex justify-center items-center h-[200px]">
+                  <p className="text-muted-foreground">Нет данных</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* График завершенных/незавершенных тренировок */}
+          <Card className="md:col-span-1">
+            <CardHeader>
+              <CardTitle>Завершение тренировок</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {completionStats.some(stat => stat.value > 0) ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={completionStats}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      nameKey="name"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {completionStats.map((entry, index) => (
+                        <Cell key={`completion-cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} тренировок`, 'Количество']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex justify-center items-center h-[200px]">
+                  <p className="text-muted-foreground">Нет данных</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* График тренировок по месяцам */}
+          <Card className="col-span-full">
+            <CardHeader>
+              <CardTitle>Тренировки по месяцам</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {monthlyStats.some(month => month.count > 0) ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={monthlyStats}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => [`${value} тренировок`, 'Количество']} />
+                    <Legend />
+                    <Bar 
+                      name="Количество тренировок"
+                      dataKey="count" 
+                      fill="hsl(var(--primary))" 
+                      radius={[4, 4, 0, 0]} 
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex justify-center items-center h-[300px]">
+                  <p className="text-muted-foreground">Нет данных за последние месяцы</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

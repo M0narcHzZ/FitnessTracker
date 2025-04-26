@@ -1,29 +1,29 @@
 import { useState } from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { formatDistanceToNow, isToday, format } from "date-fns";
-import { ru } from "date-fns/locale";
 import { WorkoutLog } from "@shared/schema";
+import { format, differenceInDays, compareDesc } from "date-fns";
+import { ru } from "date-fns/locale";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { 
-  ArrowRight, 
-  Calendar as CalendarIcon, 
-  Check, 
-  CheckCircle, 
-  Clock4, 
-  Dumbbell, 
-  ListFilter
+  CheckCircle2,
+  Clock, 
+  Calendar, 
+  ChevronRight, 
+  Search, 
+  FilterX,
+  CalendarDays
 } from "lucide-react";
-import { formatDateToRu, getColorClass, getLightBgClass } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 interface WorkoutHistoryProps {
   workoutLogs: WorkoutLog[];
@@ -34,239 +34,285 @@ interface WorkoutDetailsProps {
   onClose: () => void;
 }
 
-// Компонент детального просмотра тренировки
+// Компонент для отображения подробных данных о тренировке
 const WorkoutDetails = ({ workoutLogId, onClose }: WorkoutDetailsProps) => {
-  // Получаем логи упражнений
-  const { 
-    data: exerciseLogs, 
-    isLoading 
-  } = useQuery({ 
-    queryKey: ['/api/workout-logs', workoutLogId, 'exercise-logs'], 
-    queryFn: () => 
-      fetch(`/api/workout-logs/${workoutLogId}/exercise-logs`).then(res => res.json()) 
+  const { data, isLoading, error } = useQuery<any>({
+    queryKey: [`/api/workout-logs/${workoutLogId}`],
   });
 
-  // Получаем детали тренировки
-  const { 
-    data: workoutLog 
-  } = useQuery({ 
-    queryKey: ['/api/workout-logs', workoutLogId], 
-    queryFn: () => 
-      fetch(`/api/workout-logs/${workoutLogId}`).then(res => res.json()),
-    enabled: !!workoutLogId 
+  const { data: exerciseLogs = [], isLoading: isExerciseLogsLoading } = useQuery<any[]>({
+    queryKey: [`/api/workout-logs/${workoutLogId}/exercise-logs`],
   });
 
-  if (isLoading || !exerciseLogs || !workoutLog) {
+  if (isLoading || isExerciseLogsLoading) {
     return (
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Загрузка...</DialogTitle>
-        </DialogHeader>
-        <div className="py-8 flex justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-        </div>
-      </DialogContent>
+      <div className="flex justify-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
+  if (error) {
+    return <div>Ошибка загрузки данных</div>;
+  }
+
+  if (!data) {
+    return <div>Информация о тренировке не найдена</div>;
+  }
+  
+  const workoutDate = new Date(data.date);
+
   return (
-    <DialogContent className="max-w-2xl">
-      <DialogHeader>
-        <DialogTitle className="text-xl">
-          {workoutLog.name || "Тренировка"}
-        </DialogTitle>
-        <div className="flex items-center text-sm text-muted-foreground">
-          <CalendarIcon className="mr-1 h-4 w-4" />
-          {formatDateToRu(workoutLog.date)}
-          {workoutLog.completed && (
-            <Badge variant="success" className="ml-2">
-              <Check className="mr-1 h-3 w-3" />
-              Выполнена
-            </Badge>
-          )}
-        </div>
-      </DialogHeader>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold">{data.name || "Тренировка"}</h3>
+        <Badge variant={data.completed ? "success" : "outline"}>
+          {data.completed ? "Завершена" : "В процессе"}
+        </Badge>
+      </div>
       
-      <div className="space-y-4 my-2">
+      <div className="flex items-center text-sm text-muted-foreground space-x-4">
+        <div className="flex items-center">
+          <Calendar className="mr-2 h-4 w-4" />
+          {format(workoutDate, "d MMMM yyyy", { locale: ru })}
+        </div>
+        <div className="flex items-center">
+          <Clock className="mr-2 h-4 w-4" />
+          {format(workoutDate, "HH:mm", { locale: ru })}
+        </div>
+      </div>
+      
+      <div className="space-y-4">
+        <h4 className="font-medium text-lg">Упражнения</h4>
+        
         {exerciseLogs.length > 0 ? (
-          exerciseLogs.map((log) => (
-            <Card key={log.id} className="overflow-hidden">
-              <div className="flex p-3 bg-muted/20">
-                <div className="mr-4">
-                  <div className="bg-primary-light p-2 rounded-full">
-                    <Dumbbell className="h-5 w-5 text-primary" />
+          <div className="space-y-2">
+            {exerciseLogs.map((log: any) => (
+              <div 
+                key={log.id}
+                className="p-3 rounded-md border border-muted bg-card flex justify-between items-center"
+              >
+                <div>
+                  <div className="font-medium">{log.exercise.name}</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {log.setNumber > 0 && `Подход ${log.setNumber}`}
+                    {log.reps > 0 && ` • ${log.reps} повторений`}
+                    {log.weight > 0 && ` • ${log.weight} кг`}
+                    {log.duration && ` • ${log.duration}`}
                   </div>
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium">{log.exercise.name}</h4>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {log.reps && (
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                        {log.reps} повт.
-                      </span>
-                    )}
-                    {log.sets && (
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                        {log.sets} подх.
-                      </span>
-                    )}
-                    {log.weight && (
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                        {log.weight} кг
-                      </span>
-                    )}
-                    {log.duration && (
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                        {log.duration}
-                      </span>
-                    )}
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      log.completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {log.completed ? 'Выполнено' : 'Не выполнено'}
-                    </span>
-                  </div>
-                </div>
+                
+                {log.completed && (
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                )}
               </div>
-            </Card>
-          ))
-        ) : (
-          <div className="text-center py-6 bg-muted/20 rounded-lg">
-            <p className="text-muted-foreground">Нет данных об упражнениях</p>
+            ))}
           </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-4">
+            Нет данных об упражнениях
+          </p>
         )}
       </div>
-      
-      <div className="flex justify-end">
-        <Button variant="outline" onClick={onClose}>
-          Закрыть
-        </Button>
-      </div>
-    </DialogContent>
+    </div>
   );
 };
 
 const WorkoutHistory = ({ workoutLogs }: WorkoutHistoryProps) => {
-  const [filter, setFilter] = useState<"all" | "completed" | "pending">("all");
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "completed" | "inProgress">("all");
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<number | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Фильтрация логов
-  const filteredLogs = workoutLogs.filter(log => {
-    if (filter === "all") return true;
-    if (filter === "completed") return log.completed;
-    if (filter === "pending") return !log.completed;
-    return true;
-  });
+  // Сортируем и фильтруем логи тренировок
+  const filteredAndSortedLogs = workoutLogs
+    .filter(log => {
+      // Фильтр по статусу
+      if (filter === "completed" && !log.completed) return false;
+      if (filter === "inProgress" && log.completed) return false;
+      
+      // Фильтр по поиску
+      if (search.trim() !== "") {
+        const searchLower = search.toLowerCase();
+        const nameMatch = log.name?.toLowerCase().includes(searchLower);
+        const dateMatch = format(new Date(log.date), "d MMMM yyyy", { locale: ru })
+          .toLowerCase()
+          .includes(searchLower);
+        
+        return nameMatch || dateMatch;
+      }
+      
+      return true;
+    })
+    .sort((a, b) => compareDesc(new Date(a.date), new Date(b.date)));
   
-  // Сортировка логов по дате (от новых к старым)
-  const sortedLogs = [...filteredLogs].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
+  const groupLogsByDate = (logs: WorkoutLog[]) => {
+    const groups: Record<string, WorkoutLog[]> = {};
+    
+    logs.forEach(log => {
+      const date = new Date(log.date);
+      const dateKey = format(date, "yyyy-MM-dd");
+      const formattedDate = format(date, "d MMMM yyyy", { locale: ru });
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      
+      groups[dateKey].push(log);
+    });
+    
+    return Object.entries(groups).map(([dateKey, logs]) => ({
+      date: dateKey,
+      formattedDate: format(new Date(dateKey), "d MMMM yyyy", { locale: ru }),
+      logs
+    }));
+  };
+  
+  const groupedLogs = groupLogsByDate(filteredAndSortedLogs);
+  
+  // Определение относительной даты
+  const getRelativeDateLabel = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const diffDays = differenceInDays(today, date);
+    
+    if (diffDays === 0) return "Сегодня";
+    if (diffDays === 1) return "Вчера";
+    if (diffDays > 1 && diffDays <= 7) return `${diffDays} дн. назад`;
+    
+    return null; // Возвращаем null, если не хотим показывать относительную дату
+  };
+  
+  // Очистить фильтр
+  const clearFilter = () => {
+    setSearch("");
+    setFilter("all");
+  };
   
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <div>
-              <CardTitle>История тренировок</CardTitle>
-              <CardDescription>
-                Ваши недавние тренировки и их статус
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={filter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter("all")}
-              >
-                Все
-              </Button>
-              <Button
-                variant={filter === "completed" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter("completed")}
-              >
-                Выполненные
-              </Button>
-              <Button
-                variant={filter === "pending" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter("pending")}
-              >
-                Ожидающие
-              </Button>
-            </div>
+      {/* Панель фильтров */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Найти тренировку..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        </CardHeader>
-        <CardContent>
-          {sortedLogs.length > 0 ? (
-            <div className="space-y-3">
-              {sortedLogs.map(log => {
-                const logDate = new Date(log.date);
-                const dateLabel = isToday(logDate) 
-                  ? 'Сегодня' 
-                  : formatDistanceToNow(logDate, { addSuffix: true, locale: ru });
-                
-                return (
-                  <Card
-                    key={log.id}
-                    className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => setSelectedWorkoutId(log.id)}
+          
+          <Select 
+            value={filter} 
+            onValueChange={(value) => setFilter(value as "all" | "completed" | "inProgress")}
+          >
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Статус тренировки" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все тренировки</SelectItem>
+              <SelectItem value="completed">Завершенные</SelectItem>
+              <SelectItem value="inProgress">В процессе</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {(search !== "" || filter !== "all") && (
+          <div className="flex justify-end">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearFilter} 
+              className="h-8 gap-1 text-muted-foreground"
+            >
+              <FilterX className="h-4 w-4" />
+              <span>Очистить фильтры</span>
+            </Button>
+          </div>
+        )}
+      </div>
+      
+      {/* Список тренировок по дням */}
+      <div className="space-y-6">
+        {groupedLogs.length > 0 ? (
+          groupedLogs.map(group => (
+            <div key={group.date} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-muted-foreground" />
+                <h3 className="font-medium">
+                  {group.formattedDate}
+                  {getRelativeDateLabel(group.date) && (
+                    <span className="text-sm font-normal ml-2 text-muted-foreground">
+                      ({getRelativeDateLabel(group.date)})
+                    </span>
+                  )}
+                </h3>
+              </div>
+              
+              <div className="space-y-2 pl-7">
+                {group.logs.map(log => (
+                  <Card 
+                    key={log.id} 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      setSelectedWorkoutId(log.id);
+                      setIsDialogOpen(true);
+                    }}
                   >
-                    <div className={`p-4 flex items-center justify-between border-l-4 ${
-                      log.completed ? 'border-green-500' : 'border-blue-500'
-                    }`}>
-                      <div className="flex items-center">
-                        <div className={`rounded-full p-2 mr-4 ${
-                          log.completed ? 'bg-green-100' : 'bg-blue-100'
-                        }`}>
-                          {log.completed ? (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <Clock4 className="h-5 w-5 text-blue-600" />
-                          )}
-                        </div>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center">
                         <div>
-                          <h3 className="font-medium">
-                            {log.name || "Тренировка"}
-                          </h3>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <CalendarIcon className="mr-1 h-3 w-3" />
-                            {dateLabel}
+                          <div className="font-medium">{log.name || "Тренировка"}</div>
+                          <div className="text-sm text-muted-foreground flex items-center mt-1">
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            {format(new Date(log.date), "HH:mm", { locale: ru })}
                           </div>
                         </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Badge variant={log.completed ? "success" : "outline"} className="h-5">
+                            {log.completed ? "Завершена" : "В процессе"}
+                          </Badge>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        </div>
                       </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
+                    </CardContent>
                   </Card>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="text-center py-12 bg-muted/20 rounded-lg">
-              <ListFilter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">Нет тренировок</h3>
-              <p className="text-muted-foreground mt-1">
-                {filter === "all" 
-                  ? "У вас еще нет записей о тренировках" 
-                  : filter === "completed" 
-                    ? "У вас нет выполненных тренировок" 
-                    : "У вас нет запланированных тренировок"}
+          ))
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-8">
+              <p className="text-muted-foreground text-center">
+                {search !== "" || filter !== "all" ? 
+                  "Нет тренировок, соответствующих фильтрам" : 
+                  "История тренировок пуста"
+                }
               </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        )}
+      </div>
       
-      {selectedWorkoutId && (
-        <Dialog open={!!selectedWorkoutId} onOpenChange={(open) => !open && setSelectedWorkoutId(null)}>
-          <WorkoutDetails 
-            workoutLogId={selectedWorkoutId} 
-            onClose={() => setSelectedWorkoutId(null)} 
-          />
-        </Dialog>
-      )}
+      {/* Диалог с подробностями о тренировке */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Детали тренировки</DialogTitle>
+          </DialogHeader>
+          {selectedWorkoutId && (
+            <WorkoutDetails 
+              workoutLogId={selectedWorkoutId}
+              onClose={() => setIsDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
