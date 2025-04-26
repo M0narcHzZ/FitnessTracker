@@ -12,7 +12,36 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Exercise, WorkoutProgram, WorkoutProgramWithExercises } from "@shared/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Plus, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, Plus, ArrowUp, ArrowDown, RotateCcw } from "lucide-react";
+import AddExerciseForm from "./AddExerciseForm";
+
+// Компонент-триггер для открытия формы добавления упражнений
+interface AddExerciseFormTriggerProps {
+  onExerciseCreated?: () => void;
+}
+
+const AddExerciseFormTrigger = ({ onExerciseCreated }: AddExerciseFormTriggerProps) => {
+  const [open, setOpen] = useState(false);
+  
+  return (
+    <>
+      <Button 
+        type="button" 
+        size="sm" 
+        variant="outline"
+        onClick={() => setOpen(true)}
+      >
+        <Plus className="h-4 w-4 mr-2" /> Создать новое
+      </Button>
+      
+      <AddExerciseForm 
+        open={open} 
+        onOpenChange={setOpen} 
+        onSuccess={onExerciseCreated}
+      />
+    </>
+  );
+};
 
 const workoutSchema = z.object({
   name: z.string().min(1, { message: "Введите название программы" }),
@@ -388,7 +417,13 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
           <TabsContent value="exercises">
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-medium mb-2">Добавить упражнение</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-medium">Добавить упражнение</h3>
+                  <AddExerciseFormTrigger onExerciseCreated={() => {
+                    // Обновляем список доступных упражнений после создания нового
+                    queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
+                  }} />
+                </div>
                 <div className="max-h-40 overflow-y-auto">
                   {Object.entries(exercisesByCategory).map(([category, exercises]) => (
                     <div key={category} className="mb-2">

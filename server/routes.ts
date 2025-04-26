@@ -8,7 +8,8 @@ import {
   insertWorkoutExerciseSchema,
   insertProgressPhotoSchema,
   insertWorkoutLogSchema,
-  insertExerciseLogSchema
+  insertExerciseLogSchema,
+  insertExerciseSchema
 } from "@shared/schema";
 import multer from "multer";
 import path from "path";
