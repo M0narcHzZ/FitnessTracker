@@ -400,38 +400,32 @@ export class SQLiteStorage implements IStorage {
         throw new Error("workoutProgramId is required and cannot be null");
       }
       
-      // Преобразуем camelCase в snake_case для названий полей
-      const data = {
-        workout_program_id: insertWorkoutExercise.workoutProgramId,
-        exercise_id: insertWorkoutExercise.exerciseId,
-        order: insertWorkoutExercise.order,
-        sets: insertWorkoutExercise.sets !== undefined ? insertWorkoutExercise.sets : null,
-        reps: insertWorkoutExercise.reps !== undefined ? insertWorkoutExercise.reps : null,
-        duration: insertWorkoutExercise.duration !== undefined ? insertWorkoutExercise.duration : null
-      };
-      
-      console.log("Подготовленные данные для вставки:", JSON.stringify(data));
-      
-      // Создаем SQL запрос с указанием только тех полей, которые у нас есть
-      // Обрабатываем поле "order" особым образом - это зарезервированное слово в SQL
-      const fields = Object.keys(data).map(field => {
-        if (field === 'order') {
-          return `"order"`;
-        }
-        return field;
-      }).join(", ");
-      
-      const placeholders = Object.keys(data).map(() => "?").join(", ");
-      const values = Object.values(data);
-      
-      console.log(`Запрос: INSERT INTO workout_exercises (${fields}) VALUES (${placeholders}) RETURNING *`);
-      console.log("Значения:", values);
-      
+      // Используем захардкоженный SQL запрос с явно указанными полями
+      // Для поля "order" используем кавычки
       const stmt = db.prepare(`
-        INSERT INTO workout_exercises (${fields}) 
-        VALUES (${placeholders}) 
+        INSERT INTO workout_exercises (
+          workout_program_id, 
+          exercise_id, 
+          "order", 
+          sets, 
+          reps, 
+          duration
+        ) VALUES (?, ?, ?, ?, ?, ?) 
         RETURNING *
       `);
+      
+      // Подготавливаем значения для вставки
+      const values = [
+        insertWorkoutExercise.workoutProgramId,
+        insertWorkoutExercise.exerciseId,
+        insertWorkoutExercise.order || 1,  // Если порядок не задан, используем 1
+        insertWorkoutExercise.sets !== undefined ? insertWorkoutExercise.sets : null,
+        insertWorkoutExercise.reps !== undefined ? insertWorkoutExercise.reps : null,
+        insertWorkoutExercise.duration !== undefined ? insertWorkoutExercise.duration : null
+      ];
+      
+      console.log("SQL: INSERT INTO workout_exercises (workout_program_id, exercise_id, \"order\", sets, reps, duration) VALUES (?, ?, ?, ?, ?, ?) RETURNING *");
+      console.log("Значения:", values);
       
       const result = stmt.get(...values) as WorkoutExercise;
       
