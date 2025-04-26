@@ -69,7 +69,7 @@ const WorkoutProgramCard = ({ program, onEdit }: WorkoutProgramCardProps) => {
             sets: exercise.sets,
             reps: exercise.reps,
             duration: exercise.duration,
-            order: exercise.order,
+            order: exercise.sequence,  // Важно: использовать 'order' но со значением из 'sequence'
           });
         }
       }

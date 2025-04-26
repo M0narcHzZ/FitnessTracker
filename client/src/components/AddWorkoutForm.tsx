@@ -128,7 +128,7 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
           const exerciseData: any = {
             workout_program_id: programId,
             exercise_id: exercise.exerciseId,
-            order: i + 1
+            order: i + 1  // ВАЖНО: используем 'order', а не 'sequence', т.к. в БД поле называется 'order'
           };
           
           // Добавляем необязательные поля только если они определены
@@ -183,7 +183,7 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
           const exerciseData: any = {
             workoutProgramId: editWorkout.id,
             exerciseId: exercise.exerciseId,
-            order: i + 1
+            order: i + 1  // ВАЖНО: используем 'order', а не 'sequence', т.к. в БД поле называется 'order'
           };
           
           // Добавляем необязательные поля только если они определены
