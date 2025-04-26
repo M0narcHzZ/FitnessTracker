@@ -128,6 +128,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+  
+  app.put(`${apiPrefix}/exercises/:id`, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid exercise ID' });
+      }
+      
+      // Найти упражнение прежде чем обновлять
+      const existingExercise = await storage.getExercise(id);
+      if (!existingExercise) {
+        return res.status(404).json({ message: 'Exercise not found' });
+      }
+      
+      // Обновить только указанные поля
+      const updatedExercise = await storage.updateExercise(id, req.body);
+      if (updatedExercise) {
+        res.status(200).json(updatedExercise);
+      } else {
+        res.status(404).json({ message: 'Exercise not found or could not be updated' });
+      }
+    } catch (error) {
+      console.error("Error updating exercise:", error);
+      res.status(500).json({ message: 'Failed to update exercise' });
+    }
+  });
 
   // Workout Program routes
   app.get(`${apiPrefix}/workout-programs`, async (req: Request, res: Response) => {

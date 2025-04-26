@@ -28,6 +28,7 @@ export interface IStorage {
   getExercises(): Promise<Exercise[]>;
   getExercise(id: number): Promise<Exercise | undefined>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
+  updateExercise(id: number, exercise: Partial<Exercise>): Promise<Exercise | undefined>;
   
   // Workout Program methods
   getWorkoutPrograms(userId: number): Promise<WorkoutProgram[]>;
