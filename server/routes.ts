@@ -387,7 +387,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = 1; // For demo, we'll use the test user
       const category = req.query.category as string | undefined;
       const photos = await storage.getProgressPhotos(userId, category);
-      res.json(photos);
+      
+      // Преобразуем snake_case в camelCase для клиента
+      const transformedPhotos = photos.map(photo => ({
+        id: photo.id,
+        userId: photo.user_id,
+        photoUrl: photo.photo_url,
+        category: photo.category,
+        date: photo.date,
+        notes: photo.notes,
+        relatedMeasurementId: photo.related_measurement_id
+      }));
+      
+      res.json(transformedPhotos);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch progress photos' });
     }
@@ -438,7 +450,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const photo = await storage.createProgressPhoto(dataForDb);
         console.log("Photo saved successfully:", photo);
-        res.status(201).json(photo);
+        
+        // Преобразуем snake_case в camelCase для клиента
+        const transformedPhoto = {
+          id: photo.id,
+          userId: photo.user_id,
+          photoUrl: photo.photo_url,
+          category: photo.category,
+          date: photo.date,
+          notes: photo.notes,
+          relatedMeasurementId: photo.related_measurement_id
+        };
+        
+        res.status(201).json(transformedPhoto);
       } catch (dbError) {
         console.error("Error creating progress photo:", dbError);
         res.status(500).json({ message: 'Failed to save photo to database' });
@@ -464,7 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Delete the file
-      const filePath = path.join(process.cwd(), photo.photoUrl);
+      const filePath = path.join(process.cwd(), photo.photo_url);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
