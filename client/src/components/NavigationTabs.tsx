@@ -20,16 +20,16 @@ const NavigationTabs = () => {
               : location.startsWith(item.path);
               
           return (
-            <Link key={item.path} href={item.path}>
-              <a
-                className={`px-6 py-3 font-medium ${
-                  isActive
-                    ? "border-b-2 border-primary text-primary" 
-                    : "text-neutral-medium hover:text-primary"
-                }`}
-              >
-                {item.name}
-              </a>
+            <Link 
+              key={item.path} 
+              href={item.path}
+              className={`px-6 py-3 font-medium ${
+                isActive
+                  ? "border-b-2 border-primary text-primary" 
+                  : "text-neutral-medium hover:text-primary"
+              }`}
+            >
+              {item.name}
             </Link>
           );
         })}

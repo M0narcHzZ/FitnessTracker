@@ -65,15 +65,15 @@ const MobileNavigation = () => {
                 : location.startsWith(item.path);
                 
             return (
-              <Link key={item.path} href={item.path}>
-                <a 
-                  className={`flex flex-col items-center p-3 ${
-                    isActive ? "text-primary" : "text-neutral-medium"
-                  }`}
-                >
-                  <span className="material-icons">{item.icon}</span>
-                  <span className="text-xs mt-1">{item.name}</span>
-                </a>
+              <Link 
+                key={item.path} 
+                href={item.path}
+                className={`flex flex-col items-center p-3 ${
+                  isActive ? "text-primary" : "text-neutral-medium"
+                }`}
+              >
+                <span className="material-icons">{item.icon}</span>
+                <span className="text-xs mt-1">{item.name}</span>
               </Link>
             );
           })}
