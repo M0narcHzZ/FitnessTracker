@@ -1,5 +1,4 @@
 import type { Express, Request, Response, NextFunction } from "express";
-import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import * as z from "zod";
@@ -37,7 +36,7 @@ const upload = multer({ storage: storage2 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files
-  app.use('/uploads', express.static(uploadDir));
+  // We're using express.static in index.ts instead
 
   // API Routes prefix
   const apiPrefix = '/api';
@@ -398,23 +397,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = 1; // For demo, we'll use the test user
       
+      console.log("Received photo form data:", req.body);
+      
       if (!req.file) {
+        console.error("No file was uploaded");
         return res.status(400).json({ message: 'No photo provided' });
       }
       
+      console.log("Received file:", req.file);
+      
       const photoUrl = `/uploads/${req.file.filename}`;
       
+      // Правильно обрабатываем relatedMeasurementId
+      let formData = { ...req.body };
+      if (formData.relatedMeasurementId === "none" || formData.relatedMeasurementId === "") {
+        formData.relatedMeasurementId = null;
+      }
+      
+      console.log("Processed form data:", formData);
+      
       const validatedData = insertProgressPhotoSchema.parse({
-        ...req.body,
+        ...formData,
         userId,
         photoUrl,
         date: new Date()
       });
       
+      console.log("Validated data:", validatedData);
+      
       const photo = await storage.createProgressPhoto(validatedData);
+      console.log("Photo saved successfully:", photo);
       res.status(201).json(photo);
     } catch (error) {
+      console.error("Error details:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         res.status(400).json({ message: 'Invalid progress photo data', errors: error.errors });
       } else {
         res.status(500).json({ message: 'Failed to create progress photo' });
@@ -552,4 +569,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-import express from "express";
+
