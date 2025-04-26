@@ -95,7 +95,7 @@ const WorkoutProgramCard = ({ program, onEdit }: WorkoutProgramCardProps) => {
   // Calculate estimated duration text
   const getDurationText = () => {
     if (program.estimatedDuration) {
-      return program.estimatedDuration;
+      return `${program.estimatedDuration} мин`;
     }
     
     if (program.exercises) {

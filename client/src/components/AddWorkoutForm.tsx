@@ -104,6 +104,7 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
   // Create workout mutation
   const createWorkoutMutation = useMutation({
     mutationFn: async (data: z.infer<typeof workoutSchema>) => {
+      console.log("Submitting workout program data:", data);
       return await apiRequest("POST", "/api/workout-programs", data);
     },
     onSuccess: async (response) => {
@@ -124,11 +125,10 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
           const exercise = exercises[i];
           
           // Формируем объект с обязательными полями
-          // Используем именно "workout_program_id", чтобы соответствовать ожиданию сервера
           const exerciseData: any = {
-            workout_program_id: programId,
-            exercise_id: exercise.exerciseId,
-            order: i + 1  // ВАЖНО: используем 'order', а не 'sequence', т.к. в БД поле называется 'order'
+            workoutProgramId: programId,
+            exerciseId: exercise.exerciseId,
+            order: i + 1  // ВАЖНО: используем 'order', но в БД есть обработка и для sequence
           };
           
           // Добавляем необязательные поля только если они определены
