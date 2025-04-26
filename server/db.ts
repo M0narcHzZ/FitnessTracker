@@ -1,9 +1,6 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import * as path from "path";
 import * as fs from "fs";
-// Импортируем только нужные нам функции для выполнения SQL-запросов, 
-// а не схему, чтобы избежать циклических зависимостей
 
 // Создаем директорию для базы данных, если её нет
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -15,18 +12,15 @@ if (!fs.existsSync(DATA_DIR)) {
 const DB_PATH = path.join(DATA_DIR, "fitness_tracker.db");
 
 // Создаем соединение с базой данных
-const sqlite = new Database(DB_PATH);
+const db = new Database(DB_PATH);
 
-// Инициализируем Drizzle ORM с нашей схемой
-export const db = drizzle(sqlite, { schema });
-
-// Выполняем миграцию в памяти (без файлов миграции) 
+// Выполняем миграцию в памяти (без файлов миграции)
 // для создания таблиц в базе данных при первом запуске
 try {
   console.log("Running database initialization...");
-  
+
   // Создаем таблицы
-  db.run(sql`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE,
@@ -106,10 +100,8 @@ try {
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (related_measurement_id) REFERENCES measurements(id)
     );
-  `);
-  
-  // Создаем индексы для улучшения производительности
-  db.run(sql`
+    
+    -- Создаем индексы для улучшения производительности
     CREATE INDEX IF NOT EXISTS idx_measurements_user_id ON measurements(user_id);
     CREATE INDEX IF NOT EXISTS idx_measurements_type ON measurements(type);
     CREATE INDEX IF NOT EXISTS idx_workout_programs_user_id ON workout_programs(user_id);
@@ -120,10 +112,10 @@ try {
     CREATE INDEX IF NOT EXISTS idx_progress_photos_user_id ON progress_photos(user_id);
     CREATE INDEX IF NOT EXISTS idx_progress_photos_category ON progress_photos(category);
   `);
-  
+
   // Проверяем наличие дефолтных упражнений
   const exerciseCount = db.prepare("SELECT COUNT(*) as count FROM exercises").get() as { count: number };
-  
+
   // Добавляем базовые упражнения, если их нет
   if (exerciseCount.count === 0) {
     console.log("Adding default exercises...");
@@ -144,29 +136,28 @@ try {
       { name: "Отжимания", category: "Верх тела", description: "Отжимания от пола" },
       { name: "Приседания", category: "Нижняя часть тела", description: "Приседания без веса" }
     ];
-    
-    const insertExercise = db.prepare("INSERT INTO exercises (name, category, description) VALUES (?, ?, ?)");
-    
-    for (const exercise of exercises) {
-      insertExercise.run(exercise.name, exercise.category, exercise.description);
-    }
+
+    const insertExerciseStmt = db.prepare("INSERT INTO exercises (name, category, description) VALUES (?, ?, ?)");
+
+    db.transaction(() => {
+      for (const exercise of exercises) {
+        insertExerciseStmt.run(exercise.name, exercise.category, exercise.description);
+      }
+    })();
   }
-  
+
   // Проверяем наличие дефолтного пользователя
   const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
-  
+
   // Создаем дефолтного пользователя, если их нет
   if (userCount.count === 0) {
     console.log("Creating default user...");
     db.prepare("INSERT INTO users (username, password) VALUES (?, ?)").run("user", "password");
   }
-  
+
   console.log("Database initialization completed successfully!");
 } catch (error) {
   console.error("Error initializing database:", error);
 }
 
-// Функция для SQL запросов
-function sql(strings: TemplateStringsArray, ...values: any[]) {
-  return String.raw({ raw: strings }, ...values);
-}
+export { db };
