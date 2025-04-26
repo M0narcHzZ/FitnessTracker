@@ -193,10 +193,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Workout Exercise routes
   app.post(`${apiPrefix}/workout-exercises`, async (req: Request, res: Response) => {
     try {
-      const validatedData = insertWorkoutExerciseSchema.parse(req.body);
-      const workoutExercise = await storage.addExerciseToWorkout(validatedData);
+      console.log("Received workout exercise data:", req.body);
+      
+      // Создаем объект с только обязательными полями
+      const exerciseData = {
+        workoutProgramId: req.body.workoutProgramId,
+        exerciseId: req.body.exerciseId,
+        order: req.body.order,
+      };
+      
+      // Добавляем опциональные поля, если они существуют в запросе
+      if (req.body.sets !== undefined) exerciseData['sets'] = req.body.sets;
+      if (req.body.reps !== undefined) exerciseData['reps'] = req.body.reps;
+      if (req.body.duration !== undefined) exerciseData['duration'] = req.body.duration;
+      
+      console.log("Validated data for insertion:", exerciseData);
+      
+      const workoutExercise = await storage.addExerciseToWorkout(exerciseData);
       res.status(201).json(workoutExercise);
     } catch (error) {
+      console.error("Error adding exercise to workout:", error);
+      
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: 'Invalid workout exercise data', errors: error.errors });
       } else {
