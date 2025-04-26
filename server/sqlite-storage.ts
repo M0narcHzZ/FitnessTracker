@@ -384,12 +384,38 @@ export class SQLiteStorage implements IStorage {
 
   async deleteWorkoutProgram(id: number): Promise<boolean> {
     try {
-      // Удаляем связанные упражнения в тренировке
-      db.prepare("DELETE FROM workout_exercises WHERE workout_program_id = ?").run(id);
-      
-      // Удаляем программу
-      const result = db.prepare("DELETE FROM workout_programs WHERE id = ? RETURNING id").get(id);
-      return !!result;
+      // Начнем транзакцию для последовательного удаления связанных данных
+      db.prepare("BEGIN TRANSACTION").run();
+
+      try {
+        // 1. Сначала найдем все логи тренировок, связанные с этой программой
+        const workoutLogs = db.prepare(
+          "SELECT id FROM workout_logs WHERE workout_program_id = ?"
+        ).all(id) as { id: number }[];
+
+        // 2. Для каждого лога тренировки удалим связанные логи упражнений
+        for (const log of workoutLogs) {
+          db.prepare("DELETE FROM exercise_logs WHERE workout_log_id = ?").run(log.id);
+        }
+
+        // 3. Удалим сами логи тренировок
+        db.prepare("DELETE FROM workout_logs WHERE workout_program_id = ?").run(id);
+
+        // 4. Удаляем связанные упражнения в тренировке
+        db.prepare("DELETE FROM workout_exercises WHERE workout_program_id = ?").run(id);
+        
+        // 5. Теперь удаляем саму программу
+        const result = db.prepare("DELETE FROM workout_programs WHERE id = ? RETURNING id").get(id);
+        
+        // Завершаем транзакцию
+        db.prepare("COMMIT").run();
+        
+        return !!result;
+      } catch (innerError) {
+        // В случае ошибки откатываем все изменения
+        db.prepare("ROLLBACK").run();
+        throw innerError;
+      }
     } catch (error) {
       console.error("Error deleting workout program:", error);
       throw error;

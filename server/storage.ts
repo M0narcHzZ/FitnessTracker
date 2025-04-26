@@ -260,15 +260,38 @@ export class MemStorage implements IStorage {
   }
 
   async deleteWorkoutProgram(id: number): Promise<boolean> {
-    // Delete associated workout exercises first
-    const workoutExercises = Array.from(this.workoutExercises.values())
-      .filter(we => we.workoutProgramId === id);
-    
-    for (const we of workoutExercises) {
-      this.workoutExercises.delete(we.id);
+    try {
+      // 1. Сначала находим все логи тренировок, связанные с этой программой
+      const workoutLogs = Array.from(this.workoutLogs.values())
+        .filter(log => log.workoutProgramId === id);
+      
+      // 2. Для каждого лога тренировки удалим связанные логи упражнений
+      for (const log of workoutLogs) {
+        const exerciseLogs = Array.from(this.exerciseLogs.values())
+          .filter(el => el.workoutLogId === log.id);
+        
+        for (const el of exerciseLogs) {
+          this.exerciseLogs.delete(el.id);
+        }
+        
+        // 3. Удаляем сам лог тренировки
+        this.workoutLogs.delete(log.id);
+      }
+      
+      // 4. Удаляем связанные упражнения в тренировке
+      const workoutExercises = Array.from(this.workoutExercises.values())
+        .filter(we => we.workoutProgramId === id);
+      
+      for (const we of workoutExercises) {
+        this.workoutExercises.delete(we.id);
+      }
+      
+      // 5. Наконец, удаляем саму программу тренировок
+      return this.workoutPrograms.delete(id);
+    } catch (error) {
+      console.error("Error deleting workout program:", error);
+      throw error;
     }
-    
-    return this.workoutPrograms.delete(id);
   }
 
   // Workout Exercise methods

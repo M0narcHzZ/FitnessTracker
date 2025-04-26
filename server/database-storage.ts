@@ -284,15 +284,34 @@ export class DatabaseStorage implements IStorage {
 
   async deleteWorkoutProgram(id: number): Promise<boolean> {
     try {
-      // Сначала удаляем связанные упражнения
-      await db.delete(workoutExercises)
-        .where(eq(workoutExercises.workoutProgramId, id));
-      
-      // Затем удаляем саму программу
-      const results = await db.delete(workoutPrograms)
-        .where(eq(workoutPrograms.id, id))
-        .returning();
-      return results.length > 0;
+      // Транзакция для атомарного удаления всех связанных данных
+      return await db.transaction(async (tx) => {
+        // 1. Сначала находим все логи тренировок, связанные с этой программой
+        const workoutLogsData = await tx.select({ id: workoutLogs.id })
+          .from(workoutLogs)
+          .where(eq(workoutLogs.workoutProgramId, id));
+
+        // 2. Для каждого лога тренировки удаляем связанные логи упражнений
+        for (const log of workoutLogsData) {
+          await tx.delete(exerciseLogs)
+            .where(eq(exerciseLogs.workoutLogId, log.id));
+        }
+
+        // 3. Удаляем сами логи тренировок
+        await tx.delete(workoutLogs)
+          .where(eq(workoutLogs.workoutProgramId, id));
+
+        // 4. Удаляем связанные упражнения в тренировке
+        await tx.delete(workoutExercises)
+          .where(eq(workoutExercises.workoutProgramId, id));
+        
+        // 5. Теперь удаляем саму программу
+        const results = await tx.delete(workoutPrograms)
+          .where(eq(workoutPrograms.id, id))
+          .returning();
+        
+        return results.length > 0;
+      });
     } catch (error) {
       console.error("Error deleting workout program:", error);
       throw error;
