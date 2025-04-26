@@ -158,7 +158,7 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
   };
   
   // Функция для форматирования заголовка календаря
-  const formatCaption = (month: Date, options: { locale?: any }) => {
+  const formatCaption = (_: Date, options: { locale?: any }) => {
     const weekNumber = getWeek(currentWeek);
     return (
       <div className="flex justify-between items-center px-1">
