@@ -112,7 +112,8 @@ const AddPhotoForm = ({ open, onOpenChange }: AddPhotoFormProps) => {
       formData.append("notes", data.notes);
     }
     
-    if (data.relatedMeasurementId) {
+    // Проверяем, что relatedMeasurementId существует и не равно "none"
+    if (data.relatedMeasurementId && data.relatedMeasurementId.toString() !== "none") {
       formData.append("relatedMeasurementId", data.relatedMeasurementId.toString());
     }
     
@@ -221,14 +222,14 @@ const AddPhotoForm = ({ open, onOpenChange }: AddPhotoFormProps) => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Связать с измерением</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value?.toString() || ""}>
+                  <Select onValueChange={field.onChange} value={field.value?.toString() || "none"}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Выберите измерение (опционально)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Не связывать</SelectItem>
+                      <SelectItem value="none">Не связывать</SelectItem>
                       {measurements?.filter(m => m.type === form.watch("category") || !form.watch("category"))
                         .slice(0, 10)
                         .map((measurement) => (
