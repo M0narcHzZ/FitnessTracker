@@ -400,38 +400,55 @@ export class SQLiteStorage implements IStorage {
         throw new Error("workoutProgramId is required and cannot be null");
       }
       
-      // Используем захардкоженный SQL запрос с явно указанными полями
-      // Для поля "order" используем кавычки
-      const stmt = db.prepare(`
-        INSERT INTO workout_exercises (
-          workout_program_id, 
-          exercise_id, 
-          "order", 
-          sets, 
-          reps, 
-          duration
-        ) VALUES (?, ?, ?, ?, ?, ?) 
+      // Обходим проблемы с полем "order" (зарезервированное слово), используя последовательные INSERT
+      // без включения всех полей сразу
+      
+      // Сначала создаем базовую запись с только обязательными полями
+      let stmt = db.prepare(`
+        INSERT INTO workout_exercises (workout_program_id, exercise_id) 
+        VALUES (?, ?) 
         RETURNING *
       `);
       
-      // Подготавливаем значения для вставки
-      const values = [
+      let result = stmt.get(
         insertWorkoutExercise.workoutProgramId,
-        insertWorkoutExercise.exerciseId,
-        insertWorkoutExercise.order || 1,  // Если порядок не задан, используем 1
-        insertWorkoutExercise.sets !== undefined ? insertWorkoutExercise.sets : null,
-        insertWorkoutExercise.reps !== undefined ? insertWorkoutExercise.reps : null,
-        insertWorkoutExercise.duration !== undefined ? insertWorkoutExercise.duration : null
-      ];
-      
-      console.log("SQL: INSERT INTO workout_exercises (workout_program_id, exercise_id, \"order\", sets, reps, duration) VALUES (?, ?, ?, ?, ?, ?) RETURNING *");
-      console.log("Значения:", values);
-      
-      const result = stmt.get(...values) as WorkoutExercise;
+        insertWorkoutExercise.exerciseId
+      ) as WorkoutExercise;
       
       if (!result) {
         throw new Error("Failed to add exercise to workout");
       }
+      
+      // Затем обновляем остальные поля по отдельности
+      const id = result.id;
+      
+      // Обновляем order
+      if (insertWorkoutExercise.order !== undefined) {
+        stmt = db.prepare('UPDATE workout_exercises SET "order" = ? WHERE id = ?');
+        stmt.run(insertWorkoutExercise.order || 1, id);
+      }
+      
+      // Обновляем sets
+      if (insertWorkoutExercise.sets !== undefined) {
+        stmt = db.prepare('UPDATE workout_exercises SET sets = ? WHERE id = ?');
+        stmt.run(insertWorkoutExercise.sets, id);
+      }
+      
+      // Обновляем reps
+      if (insertWorkoutExercise.reps !== undefined) {
+        stmt = db.prepare('UPDATE workout_exercises SET reps = ? WHERE id = ?');
+        stmt.run(insertWorkoutExercise.reps, id);
+      }
+      
+      // Обновляем duration
+      if (insertWorkoutExercise.duration !== undefined) {
+        stmt = db.prepare('UPDATE workout_exercises SET duration = ? WHERE id = ?');
+        stmt.run(insertWorkoutExercise.duration, id);
+      }
+      
+      // Получаем обновленную запись
+      stmt = db.prepare('SELECT * FROM workout_exercises WHERE id = ?');
+      result = stmt.get(id) as WorkoutExercise;
       
       console.log("Результат добавления упражнения:", JSON.stringify(result));
       
