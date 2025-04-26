@@ -106,15 +106,28 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
     mutationFn: async (data: z.infer<typeof workoutSchema>) => {
       return await apiRequest("POST", "/api/workout-programs", data);
     },
-    onSuccess: async (program) => {
+    onSuccess: async (response) => {
+      console.log("Программа создана успешно:", response);
+      
+      // Убедимся, что у нас есть ID программы
+      // В зависимости от формата ответа API - может возвращаться как program.id или program.user_id
+      let programId: number;
+      if (typeof response === 'object' && response !== null) {
+        programId = response.id || response.workout_program_id;
+      } else {
+        throw new Error("Не удалось получить ID созданной программы");
+      }
+      
       // Add exercises to the program
       if (exercises.length > 0) {
         for (let i = 0; i < exercises.length; i++) {
           const exercise = exercises[i];
+          
           // Формируем объект с обязательными полями
+          // Используем именно "workout_program_id", чтобы соответствовать ожиданию сервера
           const exerciseData: any = {
-            workoutProgramId: program.id,
-            exerciseId: exercise.exerciseId,
+            workout_program_id: programId,
+            exercise_id: exercise.exerciseId,
             order: i + 1
           };
           
@@ -122,6 +135,8 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
           if (exercise.sets !== undefined) exerciseData.sets = exercise.sets;
           if (exercise.reps !== undefined && exercise.reps !== null) exerciseData.reps = exercise.reps;
           if (exercise.duration !== undefined && exercise.duration !== null) exerciseData.duration = exercise.duration;
+          
+          console.log("Добавление упражнения:", exerciseData);
           
           await apiRequest("POST", "/api/workout-exercises", exerciseData);
         }

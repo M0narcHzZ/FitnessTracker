@@ -394,24 +394,45 @@ export class SQLiteStorage implements IStorage {
 
   async addExerciseToWorkout(insertWorkoutExercise: InsertWorkoutExercise): Promise<WorkoutExercise> {
     try {
+      console.log("Добавление упражнения в программу, данные:", JSON.stringify(insertWorkoutExercise));
+      
+      if (!insertWorkoutExercise.workoutProgramId) {
+        throw new Error("workoutProgramId is required and cannot be null");
+      }
+      
+      // Преобразуем camelCase в snake_case для названий полей
+      const data = {
+        workout_program_id: insertWorkoutExercise.workoutProgramId,
+        exercise_id: insertWorkoutExercise.exerciseId,
+        order: insertWorkoutExercise.order,
+        sets: insertWorkoutExercise.sets !== undefined ? insertWorkoutExercise.sets : null,
+        reps: insertWorkoutExercise.reps !== undefined ? insertWorkoutExercise.reps : null,
+        duration: insertWorkoutExercise.duration !== undefined ? insertWorkoutExercise.duration : null
+      };
+      
+      console.log("Подготовленные данные для вставки:", JSON.stringify(data));
+      
+      // Создаем SQL запрос с указанием только тех полей, которые у нас есть
+      const fields = Object.keys(data).join(", ");
+      const placeholders = Object.keys(data).map(() => "?").join(", ");
+      const values = Object.values(data);
+      
+      console.log(`Запрос: INSERT INTO workout_exercises (${fields}) VALUES (${placeholders}) RETURNING *`);
+      console.log("Значения:", values);
+      
       const stmt = db.prepare(`
-        INSERT INTO workout_exercises (
-          workout_program_id, exercise_id, sets, reps, duration, "order"
-        ) VALUES (?, ?, ?, ?, ?, ?) RETURNING *
+        INSERT INTO workout_exercises (${fields}) 
+        VALUES (${placeholders}) 
+        RETURNING *
       `);
       
-      const result = stmt.get(
-        insertWorkoutExercise.workoutProgramId,
-        insertWorkoutExercise.exerciseId,
-        insertWorkoutExercise.sets || null,
-        insertWorkoutExercise.reps || null,
-        insertWorkoutExercise.duration || null,
-        insertWorkoutExercise.order
-      ) as WorkoutExercise;
+      const result = stmt.get(...values) as WorkoutExercise;
       
       if (!result) {
         throw new Error("Failed to add exercise to workout");
       }
+      
+      console.log("Результат добавления упражнения:", JSON.stringify(result));
       
       return result;
     } catch (error) {

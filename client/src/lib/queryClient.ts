@@ -11,7 +11,9 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-): Promise<Response> {
+): Promise<any> {
+  console.log(`API Request ${method} ${url}:`, data);
+  
   const res = await fetch(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
@@ -19,8 +21,24 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  await throwIfResNotOk(res);
-  return res;
+  // For DELETE with 204, just return true
+  if (method === "DELETE" && res.status === 204) {
+    return true;
+  }
+
+  try {
+    await throwIfResNotOk(res);
+    // Parse JSON only if the status isn't 204 No Content
+    if (res.status !== 204) {
+      const responseData = await res.json();
+      console.log(`API Response ${method} ${url}:`, responseData);
+      return responseData;
+    }
+    return true;
+  } catch (error) {
+    console.error(`API Error ${method} ${url}:`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
