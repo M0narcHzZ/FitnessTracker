@@ -111,14 +111,19 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
       if (exercises.length > 0) {
         for (let i = 0; i < exercises.length; i++) {
           const exercise = exercises[i];
-          await apiRequest("POST", "/api/workout-exercises", {
+          // Формируем объект с обязательными полями
+          const exerciseData: any = {
             workoutProgramId: program.id,
             exerciseId: exercise.exerciseId,
-            sets: exercise.sets,
-            reps: exercise.reps,
-            duration: exercise.duration,
             order: i + 1
-          });
+          };
+          
+          // Добавляем необязательные поля только если они определены
+          if (exercise.sets !== undefined) exerciseData.sets = exercise.sets;
+          if (exercise.reps !== undefined && exercise.reps !== null) exerciseData.reps = exercise.reps;
+          if (exercise.duration !== undefined && exercise.duration !== null) exerciseData.duration = exercise.duration;
+          
+          await apiRequest("POST", "/api/workout-exercises", exerciseData);
         }
       }
       
