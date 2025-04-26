@@ -123,7 +123,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const programs = await Promise.all(programPromises);
-      res.json(programs);
+      
+      // Fix field names: transform snake_case to camelCase for client
+      const transformedPrograms = programs.map(program => {
+        return {
+          id: program.id,
+          userId: program.userId || program.user_id,
+          name: program.name,
+          description: program.description,
+          colorScheme: program.colorScheme || program.color_scheme,
+          estimatedDuration: program.estimatedDuration || program.estimated_duration,
+          exercises: program.exercises
+        };
+      });
+      
+      res.json(transformedPrograms);
     } catch (error) {
       console.error("Error getting workout programs with exercises:", error);
       res.status(500).json({ message: 'Failed to fetch workout programs' });
@@ -139,7 +153,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Workout program not found' });
       }
       
-      res.json(program);
+      // Fix field names: transform snake_case to camelCase for client
+      const transformedProgram = {
+        id: program.id,
+        userId: program.userId || program.user_id,
+        name: program.name,
+        description: program.description,
+        colorScheme: program.colorScheme || program.color_scheme,
+        estimatedDuration: program.estimatedDuration || program.estimated_duration,
+        exercises: program.exercises
+      };
+      
+      res.json(transformedProgram);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch workout program' });
     }
@@ -150,7 +175,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = 1; // For demo, we'll use the test user
       const validatedData = insertWorkoutProgramSchema.parse({ ...req.body, userId });
       const program = await storage.createWorkoutProgram(validatedData);
-      res.status(201).json(program);
+      
+      // Transform to camelCase before returning to client
+      const transformedProgram = {
+        id: program.id,
+        userId: program.userId || program.user_id,
+        name: program.name,
+        description: program.description,
+        colorScheme: program.colorScheme || program.color_scheme,
+        estimatedDuration: program.estimatedDuration || program.estimated_duration
+      };
+      
+      res.status(201).json(transformedProgram);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: 'Invalid workout program data', errors: error.errors });
