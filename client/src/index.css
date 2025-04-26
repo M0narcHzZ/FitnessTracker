@@ -115,32 +115,34 @@
 }
 
 .rdp-caption {
-  @apply pb-3;
+  @apply pb-4;
 }
 
 .rdp-table {
-  @apply w-full;
+  @apply w-full max-w-full table-fixed;
 }
 
 .rdp-cell {
-  @apply text-center p-0;
+  @apply text-center p-0 py-2;
 }
 
 .rdp-head_cell {
-  @apply font-semibold text-sm text-gray-600 dark:text-gray-300 py-2;
+  @apply font-bold text-sm text-gray-600 dark:text-gray-300 py-3 capitalize;
 }
 
 .rdp-day {
-  @apply w-10 h-10 mx-auto rounded-full flex items-center justify-center text-sm transition-colors
+  @apply w-10 h-10 mx-auto rounded-full flex items-center justify-center text-sm font-medium transition-all
     hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary;
 }
 
 .rdp-day_today {
-  @apply font-bold text-primary bg-primary-light hover:bg-primary/10 dark:bg-primary/5 dark:hover:bg-primary/10;
+  @apply font-bold text-primary bg-primary-light hover:bg-primary/10 dark:bg-primary/5 dark:hover:bg-primary/10
+    ring-2 ring-primary/30 ring-offset-2 ring-offset-background;
 }
 
 .rdp-day_selected {
-  @apply bg-primary text-primary-foreground font-bold hover:bg-primary/90 focus:ring-primary/50;
+  @apply bg-primary text-primary-foreground font-bold hover:bg-primary/90 focus:ring-primary/50
+    shadow-md shadow-primary/20;
 }
 
 .workout-day {
@@ -149,16 +151,18 @@
 
 .workout-day::after {
   content: "";
-  @apply absolute top-0 right-0 h-2.5 w-2.5 bg-blue-500 rounded-full border-2 border-white dark:border-gray-900;
+  @apply absolute top-0 right-0 h-3 w-3 bg-blue-500 rounded-full border-2 border-white dark:border-gray-900
+    shadow-sm;
 }
 
 .completed-workout::after {
   content: "";
-  @apply absolute top-0 right-0 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900;
+  @apply absolute top-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900
+    shadow-sm;
 }
 
 .rdp-day_outside {
-  @apply text-gray-400 dark:text-gray-600;
+  @apply text-gray-400 dark:text-gray-600 opacity-50;
 }
 
 .rdp-button:hover:not([disabled]) {
@@ -166,7 +170,20 @@
 }
 
 .rdp-row {
-  @apply flex justify-between;
+  @apply flex justify-between items-center py-1;
+}
+
+/* Улучшаем отображение дат в календаре */
+.rdp-day_range_start:not(.rdp-day_range_end) {
+  @apply rounded-l-full rounded-r-none;
+}
+
+.rdp-day_range_end:not(.rdp-day_range_start) {
+  @apply rounded-r-full rounded-l-none;
+}
+
+.rdp-day_range_middle {
+  @apply rounded-none;
 }
 
 /* Дополнительные утилиты */
