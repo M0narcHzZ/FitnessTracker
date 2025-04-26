@@ -121,16 +121,22 @@
 .rdp-table {
   @apply w-full max-w-full table-fixed border-spacing-0;
   width: 100% !important;
+  table-layout: fixed !important;
 }
 
 .rdp-cell {
   @apply text-center p-0 py-2;
-  width: calc(100% / 7);
+  width: calc(100% / 7) !important;
+  min-width: auto !important;
+  max-width: none !important;
 }
 
 .rdp-head_cell {
   @apply font-bold text-sm text-gray-600 dark:text-gray-300 py-3 capitalize;
-  width: calc(100% / 7);
+  width: calc(100% / 7) !important;
+  min-width: auto !important;
+  max-width: none !important;
+  text-align: center !important;
 }
 
 .rdp-day {

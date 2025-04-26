@@ -353,11 +353,10 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
                         <div className="flex items-center">
                           <Badge 
                             variant={workout.completed ? "success" : "secondary"}
-                            className="mr-2 px-3 py-1"
+                            className="px-3 py-1"
                           >
                             {workout.completed ? "Завершена" : "В процессе"}
                           </Badge>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </div>
                       </div>
                     </DialogTrigger>
