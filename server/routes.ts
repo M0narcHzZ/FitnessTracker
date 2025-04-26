@@ -112,6 +112,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch exercises' });
     }
   });
+  
+  app.post(`${apiPrefix}/exercises`, async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertExerciseSchema.parse(req.body);
+      const exercise = await storage.createExercise(validatedData);
+      res.status(201).json(exercise);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: 'Invalid exercise data', errors: error.errors });
+      } else {
+        console.error("Error creating exercise:", error);
+        res.status(500).json({ message: 'Failed to create exercise' });
+      }
+    }
+  });
 
   // Workout Program routes
   app.get(`${apiPrefix}/workout-programs`, async (req: Request, res: Response) => {
