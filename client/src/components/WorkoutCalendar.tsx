@@ -151,12 +151,8 @@ const SingleWeekRow = (props: RowProps) => {
   const { displayMonth } = props;
   if (!displayMonth) return null;
   
-  // Получаем текущую неделю
-  return (
-    <div className="py-1">
-      <Row {...props} />
-    </div>
-  );
+  // Просто передаем все пропы оригинальному компоненту Row без добавления className
+  return <Row {...props} />;
 };
 
 const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
