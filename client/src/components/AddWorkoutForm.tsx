@@ -163,10 +163,13 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
   // Update workout mutation
   const updateWorkoutMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof workoutSchema> }) => {
+      console.log("Updating workout program data:", data);
       return await apiRequest("PUT", `/api/workout-programs/${id}`, data);
     },
-    onSuccess: async () => {
+    onSuccess: async (response) => {
       if (!editWorkout) return;
+      
+      console.log("Программа обновлена успешно:", response);
       
       // Remove existing exercises
       if (editWorkout.exercises) {
@@ -183,7 +186,7 @@ const AddWorkoutForm = ({ open, onOpenChange, editWorkout }: AddWorkoutFormProps
           const exerciseData: any = {
             workoutProgramId: editWorkout.id,
             exerciseId: exercise.exerciseId,
-            order: i + 1  // ВАЖНО: используем 'order', а не 'sequence', т.к. в БД поле называется 'order'
+            order: i + 1  // ВАЖНО: используем 'order', но в БД есть обработка и для sequence
           };
           
           // Добавляем необязательные поля только если они определены
