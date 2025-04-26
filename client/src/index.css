@@ -15,12 +15,18 @@
   --input: 20 5.9% 90%;
   --primary: 142.1 76.2% 36.3%;
   --primary-foreground: 355.7 100% 97.3%;
+  --primary-light: 142.1 76.2% 90%;
   --secondary: 206.9 88.9% 53.9%;
   --secondary-foreground: 0 0% 100%;
   --accent: 33 100% 50%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 98%;
+  --neutral-light: 0 0% 96%;
+  --neutral-medium: 0 0% 75%;
+  --neutral-dark: 0 0% 50%;
   --ring: 142.1 76.2% 36.3%;
   --radius: 0.5rem;
 
@@ -55,12 +61,18 @@
   --input: 12 6.5% 15.1%;
   --primary: 142.1 70.6% 45.3%;
   --primary-foreground: 144.9 80.4% 10%;
+  --primary-light: 142.1 76.2% 25%;
   --secondary: 206.9 88.9% 53.9%;
   --secondary-foreground: 0 0% 100%;
   --accent: 33 100% 50%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 85.7% 97.3%;
+  --success: 142 71% 35%;
+  --success-foreground: 0 0% 98%;
+  --neutral-light: 0 0% 25%;
+  --neutral-medium: 0 0% 50%;
+  --neutral-dark: 0 0% 75%;
   --ring: 142.4 71.8% 29.2%;
 }
 
@@ -95,4 +107,40 @@
 
 .exercise-list::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Стили для календаря */
+.rdp-day_selected {
+  @apply bg-primary text-primary-foreground font-bold;
+}
+
+.workout-day {
+  @apply relative;
+}
+
+.workout-day::after {
+  content: "";
+  @apply absolute top-0 right-0 h-2 w-2 bg-blue-500 rounded-full;
+}
+
+.completed-workout::after {
+  content: "";
+  @apply absolute top-0 right-0 h-2 w-2 bg-green-500 rounded-full;
+}
+
+/* Дополнительные утилиты */
+.bg-primary-light {
+  background-color: hsl(var(--primary-light));
+}
+
+.text-success {
+  color: hsl(var(--success));
+}
+
+.bg-success {
+  background-color: hsl(var(--success));
+}
+
+.border-success {
+  border-color: hsl(var(--success));
 }
