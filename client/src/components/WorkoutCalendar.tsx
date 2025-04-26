@@ -15,7 +15,17 @@ import {
 import { WorkoutLog } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Calendar, CheckCircle2 } from "lucide-react";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Calendar, 
+  CheckCircle2, 
+  CalendarDays, 
+  CheckCircle, 
+  CircleDashed, 
+  Dumbbell, 
+  CalendarX 
+} from "lucide-react";
 import { 
   Dialog,
   DialogContent,
@@ -102,7 +112,11 @@ const SingleWeekRow = (props: RowProps) => {
   if (!displayMonth) return null;
   
   // Получаем текущую неделю
-  return <Row {...props} />;
+  return (
+    <div className="py-1">
+      <Row {...props} />
+    </div>
+  );
 };
 
 const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
@@ -166,19 +180,23 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
           variant="outline"
           size="icon"
           onClick={goToPreviousWeek}
-          className="h-7 w-7"
+          className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="font-medium">
-          {format(weekStart, "d MMMM", { locale: options.locale })} - {format(weekEnd, "d MMMM yyyy", { locale: options.locale })}
-          <div className="text-xs text-center text-muted-foreground">Неделя {weekNumber}</div>
+        <div className="text-center">
+          <div className="font-semibold text-base">
+            {format(weekStart, "d MMMM", { locale: options.locale })} - {format(weekEnd, "d MMMM yyyy", { locale: options.locale })}
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            Неделя {weekNumber}
+          </div>
         </div>
         <Button
           variant="outline"
           size="icon"
           onClick={goToNextWeek}
-          className="h-7 w-7"
+          className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -234,9 +252,10 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
       </Card>
       
       {selectedDay && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
+        <Card className="overflow-hidden border-t-4 border-t-primary">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="flex items-center">
+              <CalendarDays className="mr-2 h-5 w-5 text-primary" />
               Тренировки на {format(selectedDay, "d MMMM", { locale: ru })}
             </CardTitle>
           </CardHeader>
@@ -248,27 +267,44 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
                     <DialogTrigger asChild>
                       <div
                         className={`
-                          flex justify-between items-center p-3 rounded-md cursor-pointer border
+                          flex justify-between items-center p-4 rounded-lg cursor-pointer border 
+                          shadow-sm transition-all duration-200 hover:shadow-md
                           ${workout.completed 
-                            ? 'border-green-500 bg-green-50 dark:bg-green-950/30' 
-                            : 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'}
+                            ? 'border-green-500 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20' 
+                            : 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20'}
                         `}
                         onClick={() => setSelectedWorkoutId(workout.id)}
                       >
-                        <div>
-                          <div className="font-medium">{workout.name || "Тренировка"}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {format(new Date(workout.date), "HH:mm", { locale: ru })}
+                        <div className="flex items-center">
+                          {workout.completed ? (
+                            <CheckCircle className="h-10 w-10 mr-3 text-green-500" />
+                          ) : (
+                            <CircleDashed className="h-10 w-10 mr-3 text-blue-500" />
+                          )}
+                          <div>
+                            <div className="font-medium text-base">{workout.name || "Тренировка"}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {format(new Date(workout.date), "HH:mm", { locale: ru })}
+                            </div>
                           </div>
                         </div>
-                        <Badge variant={workout.completed ? "success" : "secondary"}>
-                          {workout.completed ? "Завершена" : "В процессе"}
-                        </Badge>
+                        <div className="flex items-center">
+                          <Badge 
+                            variant={workout.completed ? "success" : "secondary"}
+                            className="mr-2 px-3 py-1"
+                          >
+                            {workout.completed ? "Завершена" : "В процессе"}
+                          </Badge>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        </div>
                       </div>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[500px]">
                       <DialogHeader>
-                        <DialogTitle>Детали тренировки</DialogTitle>
+                        <DialogTitle className="flex items-center text-xl">
+                          <Dumbbell className="mr-2 h-5 w-5 text-primary" />
+                          Детали тренировки
+                        </DialogTitle>
                       </DialogHeader>
                       <WorkoutDetails workoutLogId={workout.id} />
                     </DialogContent>
@@ -276,8 +312,12 @@ const WorkoutCalendar = ({ workoutLogs }: WorkoutCalendarProps) => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-muted-foreground">
-                На выбранный день нет тренировок
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <CalendarX className="h-12 w-12 mb-2 text-muted-foreground/70" />
+                <p className="text-center">На выбранный день нет тренировок</p>
+                <Button variant="link" className="mt-2 text-primary">
+                  Добавить тренировку
+                </Button>
               </div>
             )}
           </CardContent>

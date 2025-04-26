@@ -110,8 +110,37 @@
 }
 
 /* Стили для календаря */
+.rdp {
+  @apply w-full font-sans;
+}
+
+.rdp-caption {
+  @apply pb-3;
+}
+
+.rdp-table {
+  @apply w-full;
+}
+
+.rdp-cell {
+  @apply text-center p-0;
+}
+
+.rdp-head_cell {
+  @apply font-semibold text-sm text-gray-600 dark:text-gray-300 py-2;
+}
+
+.rdp-day {
+  @apply w-10 h-10 mx-auto rounded-full flex items-center justify-center text-sm transition-colors
+    hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary;
+}
+
+.rdp-day_today {
+  @apply font-bold text-primary bg-primary-light hover:bg-primary/10 dark:bg-primary/5 dark:hover:bg-primary/10;
+}
+
 .rdp-day_selected {
-  @apply bg-primary text-primary-foreground font-bold;
+  @apply bg-primary text-primary-foreground font-bold hover:bg-primary/90 focus:ring-primary/50;
 }
 
 .workout-day {
@@ -120,12 +149,24 @@
 
 .workout-day::after {
   content: "";
-  @apply absolute top-0 right-0 h-2 w-2 bg-blue-500 rounded-full;
+  @apply absolute top-0 right-0 h-2.5 w-2.5 bg-blue-500 rounded-full border-2 border-white dark:border-gray-900;
 }
 
 .completed-workout::after {
   content: "";
-  @apply absolute top-0 right-0 h-2 w-2 bg-green-500 rounded-full;
+  @apply absolute top-0 right-0 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900;
+}
+
+.rdp-day_outside {
+  @apply text-gray-400 dark:text-gray-600;
+}
+
+.rdp-button:hover:not([disabled]) {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+.rdp-row {
+  @apply flex justify-between;
 }
 
 /* Дополнительные утилиты */
