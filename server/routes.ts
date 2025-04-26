@@ -195,21 +195,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Received workout exercise data:", req.body);
       
-      // Создаем объект с только обязательными полями
+      // Проверяем наличие необходимых полей в запросе
+      // Клиент может отправлять поля в snake_case (workout_program_id) или в camelCase (workoutProgramId)
+      const workoutProgramId = req.body.workout_program_id || req.body.workoutProgramId;
+      const exerciseId = req.body.exercise_id || req.body.exerciseId;
+      const order = req.body.order;
+      
+      if (!workoutProgramId) {
+        console.error("Missing workout_program_id in request");
+        return res.status(400).json({ 
+          message: 'Invalid workout exercise data: missing workout_program_id'
+        });
+      }
+      
+      if (!exerciseId) {
+        console.error("Missing exercise_id in request");
+        return res.status(400).json({ 
+          message: 'Invalid workout exercise data: missing exercise_id'
+        });
+      }
+      
+      // Создаем объект с правильными именами полей для storage
       const exerciseData = {
-        workoutProgramId: req.body.workoutProgramId,
-        exerciseId: req.body.exerciseId,
-        order: req.body.order,
+        workoutProgramId: parseInt(workoutProgramId),
+        exerciseId: parseInt(exerciseId),
+        order: parseInt(order || 0),
       };
       
       // Добавляем опциональные поля, если они существуют в запросе
-      if (req.body.sets !== undefined) exerciseData['sets'] = req.body.sets;
-      if (req.body.reps !== undefined) exerciseData['reps'] = req.body.reps;
-      if (req.body.duration !== undefined) exerciseData['duration'] = req.body.duration;
+      if (req.body.sets !== undefined) {
+        exerciseData['sets'] = parseInt(req.body.sets);
+      }
+      
+      if (req.body.reps !== undefined && req.body.reps !== null) {
+        exerciseData['reps'] = parseInt(req.body.reps);
+      }
+      
+      if (req.body.duration !== undefined && req.body.duration !== null) {
+        exerciseData['duration'] = req.body.duration;
+      }
       
       console.log("Validated data for insertion:", exerciseData);
       
       const workoutExercise = await storage.addExerciseToWorkout(exerciseData);
+      console.log("Exercise added successfully:", workoutExercise);
       res.status(201).json(workoutExercise);
     } catch (error) {
       console.error("Error adding exercise to workout:", error);
