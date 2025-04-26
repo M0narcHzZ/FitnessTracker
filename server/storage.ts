@@ -218,10 +218,22 @@ export class MemStorage implements IStorage {
   }
 
   async createWorkoutProgram(insertProgram: InsertWorkoutProgram): Promise<WorkoutProgram> {
-    const id = this.workoutProgramIdCounter++;
-    const program: WorkoutProgram = { ...insertProgram, id };
-    this.workoutPrograms.set(id, program);
-    return program;
+    try {
+      const id = this.workoutProgramIdCounter++;
+      // Make sure all required fields are properly set
+      const program: WorkoutProgram = { 
+        ...insertProgram, 
+        id,
+        description: insertProgram.description || null,
+        colorScheme: insertProgram.colorScheme || "primary",
+        estimatedDuration: insertProgram.estimatedDuration || null
+      };
+      this.workoutPrograms.set(id, program);
+      return program;
+    } catch (error) {
+      console.error("Error creating workout program:", error);
+      throw error;
+    }
   }
 
   async updateWorkoutProgram(id: number, programUpdate: Partial<WorkoutProgram>): Promise<WorkoutProgram | undefined> {
@@ -267,10 +279,23 @@ export class MemStorage implements IStorage {
   }
 
   async addExerciseToWorkout(insertWorkoutExercise: InsertWorkoutExercise): Promise<WorkoutExercise> {
-    const id = this.workoutExerciseIdCounter++;
-    const workoutExercise: WorkoutExercise = { ...insertWorkoutExercise, id };
-    this.workoutExercises.set(id, workoutExercise);
-    return workoutExercise;
+    try {
+      const id = this.workoutExerciseIdCounter++;
+      // Make sure all required fields are properly set
+      const workoutExercise: WorkoutExercise = { 
+        ...insertWorkoutExercise, 
+        id,
+        sets: insertWorkoutExercise.sets || null,
+        reps: insertWorkoutExercise.reps || null,
+        duration: insertWorkoutExercise.duration || null
+      };
+      this.workoutExercises.set(id, workoutExercise);
+      console.log("Added exercise to workout:", workoutExercise);
+      return workoutExercise;
+    } catch (error) {
+      console.error("Error adding exercise to workout:", error);
+      throw error;
+    }
   }
 
   async updateWorkoutExercise(id: number, update: Partial<WorkoutExercise>): Promise<WorkoutExercise | undefined> {
