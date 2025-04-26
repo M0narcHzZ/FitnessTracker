@@ -377,7 +377,7 @@ export class SQLiteStorage implements IStorage {
           sets: row.sets,
           reps: row.reps,
           duration: row.duration,
-          order: row.order,
+          sequence: row.order, // Используем sequence вместо order для совместимости
           exercise: {
             id: row.e_id,
             name: row.e_name,
@@ -400,14 +400,14 @@ export class SQLiteStorage implements IStorage {
         throw new Error("workoutProgramId is required and cannot be null");
       }
       
-      // Используем новое поле sequence вместо order
+      // Простой подход, использующий поле "order", так как именно оно физически существует в базе данных
+      // Несмотря на изменения в схеме, фактическая таблица БД еще не обновлена
       
-      // Сначала создаем базовую запись с только обязательными полями
       let stmt = db.prepare(`
         INSERT INTO workout_exercises (
           workout_program_id, 
           exercise_id, 
-          sequence,
+          "order",
           sets, 
           reps, 
           duration
@@ -415,17 +415,20 @@ export class SQLiteStorage implements IStorage {
         RETURNING *
       `);
       
+      // Получаем значение для order/sequence
+      const orderValue = insertWorkoutExercise.sequence || 1;  // Используем sequence из данных или 1 по умолчанию
+      
       // Подготавливаем значения для вставки
       const values = [
         insertWorkoutExercise.workoutProgramId,
         insertWorkoutExercise.exerciseId,
-        insertWorkoutExercise.sequence || 1,  // Используем sequence вместо order
+        orderValue,
         insertWorkoutExercise.sets !== undefined ? insertWorkoutExercise.sets : null,
         insertWorkoutExercise.reps !== undefined ? insertWorkoutExercise.reps : null,
         insertWorkoutExercise.duration !== undefined ? insertWorkoutExercise.duration : null
       ];
       
-      console.log("SQL: INSERT INTO workout_exercises (workout_program_id, exercise_id, sequence, sets, reps, duration) VALUES (?, ?, ?, ?, ?, ?) RETURNING *");
+      console.log("SQL: INSERT INTO workout_exercises (workout_program_id, exercise_id, \"order\", sets, reps, duration) VALUES (?, ?, ?, ?, ?, ?) RETURNING *");
       console.log("Значения:", values);
       
       const result = stmt.get(...values) as WorkoutExercise;
@@ -434,9 +437,15 @@ export class SQLiteStorage implements IStorage {
         throw new Error("Failed to add exercise to workout");
       }
       
-      console.log("Результат добавления упражнения:", JSON.stringify(result));
+      // Преобразуем результат, добавляя поле sequence на основе order
+      const finalResult = {
+        ...result,
+        sequence: result["order"]  // Добавляем поле sequence для совместимости, используя ['order'] для доступа
+      } as any;
       
-      return result;
+      console.log("Результат добавления упражнения:", JSON.stringify(finalResult));
+      
+      return finalResult;
     } catch (error) {
       console.error("Error adding exercise to workout:", error);
       throw error;
@@ -453,7 +462,16 @@ export class SQLiteStorage implements IStorage {
       const updateParts: string[] = [];
       const params: any[] = [];
       
-      Object.entries(update).forEach(([key, value]) => {
+      // Обрабатываем случай, когда пришло поле sequence вместо order
+      const updatedFields = { ...update };
+      if (updatedFields.sequence !== undefined && !('order' in updatedFields)) {
+        // Если есть sequence, но нет order, добавляем order
+        updatedFields["order"] = updatedFields.sequence;
+        // Удаляем sequence, так как такого поля нет в БД
+        delete updatedFields.sequence;
+      }
+      
+      Object.entries(updatedFields).forEach(([key, value]) => {
         if (key !== 'id') {
           // Специальное условие для "order", так как это зарезервированное слово в SQL
           if (key === 'order') {
@@ -466,15 +484,27 @@ export class SQLiteStorage implements IStorage {
       });
       
       if (updateParts.length === 0) {
-        return current;
+        // Преобразуем результат для совместимости с новым интерфейсом
+        return {
+          ...current,
+          sequence: current["order"]
+        } as any;
       }
       
       params.push(id);
       
       const query = `UPDATE workout_exercises SET ${updateParts.join(', ')} WHERE id = ? RETURNING *`;
-      const result = db.prepare(query).get(...params) as WorkoutExercise;
+      const result = db.prepare(query).get(...params) as any;
       
-      return result || undefined;
+      if (!result) {
+        return undefined;
+      }
+      
+      // Преобразуем результат для совместимости с новым интерфейсом
+      return {
+        ...result,
+        sequence: result["order"]
+      } as any;
     } catch (error) {
       console.error("Error updating workout exercise:", error);
       throw error;
