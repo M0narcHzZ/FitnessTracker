@@ -413,7 +413,14 @@ export class SQLiteStorage implements IStorage {
       console.log("Подготовленные данные для вставки:", JSON.stringify(data));
       
       // Создаем SQL запрос с указанием только тех полей, которые у нас есть
-      const fields = Object.keys(data).join(", ");
+      // Обрабатываем поле "order" особым образом - это зарезервированное слово в SQL
+      const fields = Object.keys(data).map(field => {
+        if (field === 'order') {
+          return `"order"`;
+        }
+        return field;
+      }).join(", ");
+      
       const placeholders = Object.keys(data).map(() => "?").join(", ");
       const values = Object.values(data);
       
