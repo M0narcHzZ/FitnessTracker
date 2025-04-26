@@ -543,28 +543,26 @@ export class SQLiteStorage implements IStorage {
 
   async createWorkoutLog(insertLog: InsertWorkoutLog): Promise<WorkoutLog> {
     try {
-      let query = "INSERT INTO workout_logs (user_id, workout_program_id";
-      let placeholders = "?, ?";
-      let params: any[] = [
+      console.log("Создание лога тренировки в БД, данные:", insertLog);
+      
+      // Простой запрос вместо сложной логики
+      const query = `
+        INSERT INTO workout_logs (
+          user_id, workout_program_id, date, completed
+        ) VALUES (?, ?, CURRENT_TIMESTAMP, ?)
+        RETURNING *
+      `;
+      
+      // Выставляем completed в 0 (false), если не указано
+      const completed = insertLog.completed !== undefined ? (insertLog.completed ? 1 : 0) : 0;
+      
+      const result = db.prepare(query).get(
         insertLog.userId,
-        insertLog.workoutProgramId
-      ];
+        insertLog.workoutProgramId,
+        completed
+      ) as WorkoutLog;
       
-      if (insertLog.date) {
-        query += ", date";
-        placeholders += ", ?";
-        params.push(insertLog.date);
-      }
-      
-      if (insertLog.completed !== undefined) {
-        query += ", completed";
-        placeholders += ", ?";
-        params.push(insertLog.completed ? 1 : 0);
-      }
-      
-      query += `) VALUES (${placeholders}) RETURNING *`;
-      
-      const result = db.prepare(query).get(...params) as WorkoutLog;
+      console.log("Результат создания лога тренировки:", result);
       
       if (!result) {
         throw new Error("Failed to create workout log");

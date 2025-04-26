@@ -373,10 +373,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(`${apiPrefix}/workout-logs`, async (req: Request, res: Response) => {
     try {
       const userId = 1; // For demo, we'll use the test user
+      
+      // Для отладки
+      console.log("Создание лога тренировки, полученные данные:", req.body);
+      
+      // Поскольку мы изменили схему, date теперь может быть строкой ISO
+      // и она необязательна (может быть undefined)
       const validatedData = insertWorkoutLogSchema.parse({ ...req.body, userId });
+      
+      console.log("Валидированные данные:", validatedData);
+      
       const log = await storage.createWorkoutLog(validatedData);
+      console.log("Созданный лог тренировки:", log);
+      
       res.status(201).json(log);
     } catch (error) {
+      console.error("Ошибка создания лога тренировки:", error);
+      
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: 'Invalid workout log data', errors: error.errors });
       } else {

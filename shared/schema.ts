@@ -94,11 +94,14 @@ export const workoutLogs = pgTable("workout_logs", {
   completed: boolean("completed").default(false),
 });
 
-export const insertWorkoutLogSchema = createInsertSchema(workoutLogs).pick({
-  userId: true,
-  workoutProgramId: true,
+// Модифицируем схему, чтобы она принимала дату как строку
+export const insertWorkoutLogSchema = createInsertSchema(workoutLogs).omit({
   date: true,
-  completed: true,
+}).extend({
+  date: z.string().datetime().optional(),
+  userId: z.number(),
+  workoutProgramId: z.number(),
+  completed: z.boolean().optional().default(false),
 });
 
 // Exercise Log model (individual exercise performance)
