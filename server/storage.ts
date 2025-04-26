@@ -447,4 +447,7 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from "./database-storage";
+
+// Теперь мы используем SQLite-базу данных вместо хранения в памяти
+export const storage = new DatabaseStorage();

@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // User model (kept from existing schema)
 export const users = pgTable("users", {
@@ -141,6 +142,90 @@ export const insertProgressPhotoSchema = createInsertSchema(progressPhotos).pick
   notes: true,
   relatedMeasurementId: true,
 });
+
+// Define relationships
+
+// User relations
+export const usersRelations = relations(users, ({ many }) => ({
+  measurements: many(measurements),
+  workoutPrograms: many(workoutPrograms),
+  workoutLogs: many(workoutLogs),
+  progressPhotos: many(progressPhotos),
+}));
+
+// Measurement relations
+export const measurementsRelations = relations(measurements, ({ one, many }) => ({
+  user: one(users, {
+    fields: [measurements.userId],
+    references: [users.id],
+  }),
+  progressPhotos: many(progressPhotos),
+}));
+
+// Exercise relations
+export const exercisesRelations = relations(exercises, ({ many }) => ({
+  workoutExercises: many(workoutExercises),
+  exerciseLogs: many(exerciseLogs),
+}));
+
+// Workout Program relations
+export const workoutProgramsRelations = relations(workoutPrograms, ({ one, many }) => ({
+  user: one(users, {
+    fields: [workoutPrograms.userId],
+    references: [users.id],
+  }),
+  workoutExercises: many(workoutExercises),
+  workoutLogs: many(workoutLogs),
+}));
+
+// Workout Exercise relations
+export const workoutExercisesRelations = relations(workoutExercises, ({ one }) => ({
+  workoutProgram: one(workoutPrograms, {
+    fields: [workoutExercises.workoutProgramId],
+    references: [workoutPrograms.id],
+  }),
+  exercise: one(exercises, {
+    fields: [workoutExercises.exerciseId],
+    references: [exercises.id],
+  }),
+}));
+
+// Workout Log relations
+export const workoutLogsRelations = relations(workoutLogs, ({ one, many }) => ({
+  user: one(users, {
+    fields: [workoutLogs.userId],
+    references: [users.id],
+  }),
+  workoutProgram: one(workoutPrograms, {
+    fields: [workoutLogs.workoutProgramId],
+    references: [workoutPrograms.id],
+  }),
+  exerciseLogs: many(exerciseLogs),
+}));
+
+// Exercise Log relations
+export const exerciseLogsRelations = relations(exerciseLogs, ({ one }) => ({
+  workoutLog: one(workoutLogs, {
+    fields: [exerciseLogs.workoutLogId],
+    references: [workoutLogs.id],
+  }),
+  exercise: one(exercises, {
+    fields: [exerciseLogs.exerciseId],
+    references: [exercises.id],
+  }),
+}));
+
+// Progress Photo relations
+export const progressPhotosRelations = relations(progressPhotos, ({ one }) => ({
+  user: one(users, {
+    fields: [progressPhotos.userId],
+    references: [users.id],
+  }),
+  relatedMeasurement: one(measurements, {
+    fields: [progressPhotos.relatedMeasurementId],
+    references: [measurements.id],
+  }),
+}));
 
 // Types
 export type User = typeof users.$inferSelect;
