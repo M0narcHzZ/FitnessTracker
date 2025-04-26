@@ -239,6 +239,51 @@ export class SQLiteStorage implements IStorage {
       throw error;
     }
   }
+  
+  async updateExercise(id: number, exerciseUpdate: Partial<Exercise>): Promise<Exercise | undefined> {
+    try {
+      // Проверяем, что упражнение существует
+      const exercise = await this.getExercise(id);
+      if (!exercise) {
+        return undefined;
+      }
+      
+      // Подготавливаем части запроса на обновление и параметры
+      const updateParts: string[] = [];
+      const params: any[] = [];
+      
+      if (exerciseUpdate.name !== undefined) {
+        updateParts.push("name = ?");
+        params.push(exerciseUpdate.name);
+      }
+      
+      if (exerciseUpdate.category !== undefined) {
+        updateParts.push("category = ?");
+        params.push(exerciseUpdate.category);
+      }
+      
+      if (exerciseUpdate.description !== undefined) {
+        updateParts.push("description = ?");
+        params.push(exerciseUpdate.description);
+      }
+      
+      // Если нет полей для обновления, возвращаем текущее упражнение
+      if (updateParts.length === 0) {
+        return exercise;
+      }
+      
+      // Добавляем ID в конец параметров
+      params.push(id);
+      
+      const query = `UPDATE exercises SET ${updateParts.join(', ')} WHERE id = ? RETURNING *`;
+      const result = db.prepare(query).get(...params) as Exercise;
+      
+      return result || undefined;
+    } catch (error) {
+      console.error("Error updating exercise:", error);
+      throw error;
+    }
+  }
 
   // Программы тренировок
   async getWorkoutPrograms(userId: number): Promise<WorkoutProgram[]> {

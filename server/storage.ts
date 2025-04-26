@@ -193,6 +193,17 @@ export class MemStorage implements IStorage {
     this.exercises.set(id, exercise);
     return exercise;
   }
+  
+  async updateExercise(id: number, exerciseUpdate: Partial<Exercise>): Promise<Exercise | undefined> {
+    const exercise = this.exercises.get(id);
+    if (!exercise) {
+      return undefined;
+    }
+    
+    const updatedExercise = { ...exercise, ...exerciseUpdate };
+    this.exercises.set(id, updatedExercise);
+    return updatedExercise;
+  }
 
   // Workout Program methods
   async getWorkoutPrograms(userId: number): Promise<WorkoutProgram[]> {

@@ -185,6 +185,31 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+  
+  async updateExercise(id: number, exerciseUpdate: Partial<Exercise>): Promise<Exercise | undefined> {
+    try {
+      // Проверяем, что упражнение существует
+      const exercise = await this.getExercise(id);
+      if (!exercise) {
+        return undefined;
+      }
+      
+      const results = await db
+        .update(exercises)
+        .set(exerciseUpdate)
+        .where(eq(exercises.id, id))
+        .returning();
+      
+      if (results.length === 0) {
+        return undefined;
+      }
+      
+      return results[0];
+    } catch (error) {
+      console.error("Error updating exercise:", error);
+      throw error;
+    }
+  }
 
   // Программы тренировок
   async getWorkoutPrograms(userId: number): Promise<WorkoutProgram[]> {
