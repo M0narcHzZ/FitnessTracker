@@ -18,11 +18,11 @@ const exerciseSchema = z.object({
 });
 
 const exerciseCategories = [
-  { label: "Силовые", value: "Силовые" },
+  { label: "Верх тела", value: "Верх тела" },
+  { label: "Нижняя часть тела", value: "Нижняя часть тела" },
   { label: "Кардио", value: "Кардио" },
-  { label: "Растяжка", value: "Растяжка" },
   { label: "Пресс", value: "Пресс" },
-  { label: "Другое", value: "Другое" },
+  { label: "Растяжка", value: "Растяжка" },
 ];
 
 interface AddExerciseFormProps {

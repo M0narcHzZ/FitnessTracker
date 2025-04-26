@@ -424,7 +424,11 @@ export class MemStorage implements IStorage {
       { name: "Планка", category: "Пресс", description: "Статическое упражнение планка" },
       { name: "Подтягивания", category: "Верх тела", description: "Классические подтягивания на перекладине" },
       { name: "Отжимания", category: "Верх тела", description: "Отжимания от пола" },
-      { name: "Приседания", category: "Нижняя часть тела", description: "Приседания без веса" }
+      { name: "Приседания", category: "Нижняя часть тела", description: "Приседания без веса" },
+      { name: "Наклоны вперед", category: "Растяжка", description: "Растяжка задней поверхности бедра" },
+      { name: "Боковые наклоны", category: "Растяжка", description: "Растяжка боковых мышц туловища" },
+      { name: "Растяжка плеч", category: "Растяжка", description: "Растяжка мышц плечевого пояса" },
+      { name: "Растяжка квадрицепса", category: "Растяжка", description: "Растяжка передней поверхности бедра" }
     ];
 
     exercises.forEach(exercise => {
