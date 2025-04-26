@@ -117,9 +117,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(`${apiPrefix}/workout-programs`, async (req: Request, res: Response) => {
     try {
       const userId = 1; // For demo, we'll use the test user
-      const programs = await storage.getWorkoutPrograms(userId);
+      // Получаем программы с упражнениями вместо простого списка программ
+      const programPromises = (await storage.getWorkoutPrograms(userId)).map(async program => {
+        return await storage.getWorkoutProgramWithExercises(program.id);
+      });
+      
+      const programs = await Promise.all(programPromises);
       res.json(programs);
     } catch (error) {
+      console.error("Error getting workout programs with exercises:", error);
       res.status(500).json({ message: 'Failed to fetch workout programs' });
     }
   });
@@ -219,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const exerciseData = {
         workoutProgramId: parseInt(workoutProgramId),
         exerciseId: parseInt(exerciseId),
-        order: parseInt(order || 0), // Важно: используем order, а не sequence, т.к. в БД поле называется order
+        sequence: parseInt(order || 0), // Важно: хотя в БД поле называется order, интерфейс IStorage ожидает поле sequence
       };
       
       // Добавляем опциональные поля, если они существуют в запросе
