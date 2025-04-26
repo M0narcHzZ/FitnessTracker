@@ -510,9 +510,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = 1; // For demo, we'll use the test user
       const logs = await storage.getWorkoutLogs(userId);
-      res.json(logs);
+      
+      // Преобразуем данные для клиента
+      const transformedLogs = logs.map(log => {
+        // Если name не указано, добавим "Тренировка" по умолчанию
+        return {
+          id: log.id,
+          userId: log.user_id,
+          workoutProgramId: log.workout_program_id,
+          date: log.date,
+          completed: log.completed,
+          name: log.name || "Тренировка"
+        };
+      });
+      
+      res.json(transformedLogs);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch workout logs' });
+    }
+  });
+  
+  // Добавляем маршрут для получения конкретного лога тренировки
+  app.get(`${apiPrefix}/workout-logs/:id`, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const log = await storage.getWorkoutLog(id);
+      
+      if (!log) {
+        return res.status(404).json({ message: 'Workout log not found' });
+      }
+      
+      // Получаем дополнительную информацию о тренировке
+      const program = log.workout_program_id ? 
+        await storage.getWorkoutProgram(log.workout_program_id) : null;
+      
+      // Преобразуем данные для клиента
+      const transformedLog = {
+        id: log.id,
+        userId: log.user_id,
+        workoutProgramId: log.workout_program_id,
+        date: log.date,
+        completed: log.completed,
+        name: log.name || (program ? program.name : "Тренировка")
+      };
+      
+      res.json(transformedLog);
+    } catch (error) {
+      console.error("Error getting workout log:", error);
+      res.status(500).json({ message: 'Failed to fetch workout log' });
     }
   });
 

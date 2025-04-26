@@ -92,6 +92,7 @@ export const workoutLogs = pgTable("workout_logs", {
   workoutProgramId: integer("workout_program_id").notNull(),
   date: timestamp("date").defaultNow().notNull(),
   completed: boolean("completed").default(false),
+  name: text("name"),  // Добавляем поле name
 });
 
 // Модифицируем схему, чтобы она принимала дату как строку
@@ -102,6 +103,7 @@ export const insertWorkoutLogSchema = createInsertSchema(workoutLogs).omit({
   userId: z.number(),
   workoutProgramId: z.number(),
   completed: z.boolean().optional().default(false),
+  name: z.string().optional(),  // Добавляем поле name в схему
 });
 
 // Exercise Log model (individual exercise performance)

@@ -72,6 +72,7 @@ try {
       workout_program_id INTEGER NOT NULL,
       date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       completed BOOLEAN DEFAULT 0,
+      name TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (workout_program_id) REFERENCES workout_programs(id)
     );
