@@ -416,6 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Processed form data:", formData);
       
+      // Сначала валидируем данные через схему
       const validatedData = insertProgressPhotoSchema.parse({
         ...formData,
         userId,
@@ -425,9 +426,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Validated data:", validatedData);
       
-      const photo = await storage.createProgressPhoto(validatedData);
-      console.log("Photo saved successfully:", photo);
-      res.status(201).json(photo);
+      // Создаем объект для вставки в базу данных,
+      // преобразуя Date в строку формата ISO для совместимости с SQLite
+      const dataForDb = {
+        ...validatedData,
+        date: validatedData.date.toISOString()
+      };
+      
+      console.log("Data for DB:", dataForDb);
+      
+      try {
+        const photo = await storage.createProgressPhoto(dataForDb);
+        console.log("Photo saved successfully:", photo);
+        res.status(201).json(photo);
+      } catch (dbError) {
+        console.error("Error creating progress photo:", dbError);
+        res.status(500).json({ message: 'Failed to save photo to database' });
+      }
     } catch (error) {
       console.error("Error details:", error);
       if (error instanceof z.ZodError) {
