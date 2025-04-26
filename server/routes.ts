@@ -219,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const exerciseData = {
         workoutProgramId: parseInt(workoutProgramId),
         exerciseId: parseInt(exerciseId),
-        sequence: parseInt(order || 0), // Используем sequence вместо order
+        order: parseInt(order || 0), // Важно: используем order, а не sequence, т.к. в БД поле называется order
       };
       
       // Добавляем опциональные поля, если они существуют в запросе
